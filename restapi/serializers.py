@@ -1,7 +1,5 @@
 from rest_framework import serializers
 from rest_framework.authtoken.admin import User
-from rest_framework.decorators import permission_classes
-from rest_framework.permissions import AllowAny
 
 from restapi.models import Category, Group, UserExpense, Expense
 
@@ -42,4 +40,3 @@ class UserExpenseSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserExpense
         fields = "__all__"
-

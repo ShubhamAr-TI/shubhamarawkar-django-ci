@@ -1,22 +1,21 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse
-# from django.shortcuts import render
-
+from rest_framework import status
 # Create your views here.
-from rest_framework import status, viewsets
+from rest_framework import viewsets, mixins
 from rest_framework.authtoken.admin import User
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from restapi.models import Category, Expense, UserExpense, Group
 from restapi.serializers import UserSerializer, CategorySerializer, ExpenseSerializer, UserExpenseSerializer, \
     GroupSerializer
-from rest_framework import status
-from rest_framework.response import Response
-from rest_framework.views import APIView
+
+
+# from django.shortcuts import render
 
 
 def index(request):
@@ -24,10 +23,16 @@ def index(request):
 
 
 class Logout(APIView):
+
     def post(self, request):
         if request.user.is_authenticated:
             request.user.auth_token.delete()
-        return Response(status=status.HTTP_201_CREATED)
+            return Response(status=status.HTTP_201_CREATED)
+
+
+class Balances(APIView):
+    def get(self, request):
+        print("wassup")
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -55,12 +60,14 @@ class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
 
+
 class GroupViewSet(viewsets.ModelViewSet):
     """
     A simple ViewSet for viewing and editing User.
     """
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
+
 
 class ExpenseViewSet(viewsets.ModelViewSet):
     """

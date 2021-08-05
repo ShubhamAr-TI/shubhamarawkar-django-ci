@@ -11,14 +11,18 @@ class Category(models.Model):
 
 class Group(models.Model):
     name = models.CharField(max_length=255)
-    users = models.ManyToManyField(User)
+    members = models.ManyToManyField(User)
 
 
 class UserExpense(models.Model):
     name = models.CharField(max_length=255)
     users = models.ForeignKey(User, on_delete=models.CASCADE)
-    amount_lent = models.DecimalField(decimal_places=3, max_digits=12)
-    amount_owed = models.DecimalField(decimal_places=3, max_digits=12)
+    paid = models.DecimalField(decimal_places=3, max_digits=12)
+    share = models.DecimalField(decimal_places=3, max_digits=12)
+
+    @property
+    def amount(self):
+        return self.paid - self.share
 
 
 class Expense(models.Model):
