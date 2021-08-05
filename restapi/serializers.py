@@ -30,13 +30,23 @@ class GroupSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
-class ExpenseSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Expense
-        fields = "__all__"
-
-
 class UserExpenseSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserExpense
         fields = "__all__"
+
+
+class ExpenseSerializer(serializers.ModelSerializer):
+    users = UserExpenseSerializer(source='userexpense_set', many=True)
+
+    def create(self, validated_data):
+        print(validated_data)
+        expense_users = validated_data.pop('userexpense_set')
+        expense = Expense.objects.create(**validated_data)
+        for eu in expense_users:
+            UserExpense.objects.create(expense=expense, **eu)
+        return expense
+
+    class Meta:
+        model = Expense
+        fields = ["category", 'description', 'total_amount', 'users']
