@@ -1,6 +1,8 @@
 from rest_framework import serializers
 from rest_framework.authtoken.admin import User
 
+from restapi.models import Category, Group, UserExpense, Expense
+
 
 class UserSerializer(serializers.ModelSerializer):
 
@@ -10,9 +12,32 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id','username', 'password']
+        fields = ['id', 'username', 'password']
         extra_kwargs = {
             'password': {'write_only': True}
         }
 
+
+class CategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = "__all__"
+
+
+class GroupSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Group
+        fields = "__all__"
+
+
+class ExpenseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Expense
+        fields = "__all__"
+
+
+class UserExpenseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserExpense
+        fields = "__all__"
 
