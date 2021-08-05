@@ -16,24 +16,30 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Category',
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True,
+                 primary_key=True, serialize=False, verbose_name='ID')),
                 ('name', models.CharField(max_length=255)),
             ],
         ),
         migrations.CreateModel(
             name='UserExpense',
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True,
+                 primary_key=True, serialize=False, verbose_name='ID')),
                 ('name', models.CharField(max_length=255)),
-                ('amount_lent', models.DecimalField(decimal_places=3, max_digits=12)),
-                ('amount_owed', models.DecimalField(decimal_places=3, max_digits=12)),
-                ('users', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
+                ('amount_lent', models.DecimalField(
+                    decimal_places=3, max_digits=12)),
+                ('amount_owed', models.DecimalField(
+                    decimal_places=3, max_digits=12)),
+                ('users', models.ForeignKey(
+                    on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
             ],
         ),
         migrations.CreateModel(
             name='Group',
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True,
+                 primary_key=True, serialize=False, verbose_name='ID')),
                 ('name', models.CharField(max_length=255)),
                 ('users', models.ManyToManyField(to=settings.AUTH_USER_MODEL)),
             ],
@@ -41,8 +47,10 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Expense',
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('description', models.CharField(default='default description', max_length=200)),
+                ('id', models.AutoField(auto_created=True,
+                 primary_key=True, serialize=False, verbose_name='ID')),
+                ('description', models.CharField(
+                    default='default description', max_length=200)),
                 ('total_amount', models.IntegerField(default=0)),
                 ('category',
                  models.ForeignKey(default=None, on_delete=django.db.models.deletion.CASCADE, to='restapi.category')),
