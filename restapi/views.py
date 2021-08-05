@@ -22,8 +22,9 @@ def index(request):
 
 
 class Logout(APIView):
-    def get(self, request):
-        request.user.auth_token.delete()
+    def post(self, request):
+        if request.user.is_authenticated:
+            request.user.auth_token.delete()
         return Response(status=status.HTTP_201_CREATED)
 
 
