@@ -95,5 +95,9 @@ class AuthTests(TestCase):
         auth_resp = self.client.post('/api/v1/auth/logout/', **headers)
         assert auth_resp.status_code == 404
 
+    def test_404_logout(self):
+        auth_resp = self.client.post('/api/v1/auth/logout/')
+        assert auth_resp.status_code == 404
+
 
 
