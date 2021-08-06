@@ -28,7 +28,7 @@ class Logout(APIView):
     def post(self, request):
         if request.user.is_authenticated:
             request.user.auth_token.delete()
-            return Response(status=status.HTTP_200_CREATED)
+            return Response(status=status.HTTP_200_OK)
 
 
 class Balances(APIView):
