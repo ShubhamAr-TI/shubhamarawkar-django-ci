@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 from restapi.models import Category, Group, UserExpense, Expense
 
@@ -68,6 +69,25 @@ class ExpenseSerializer(serializers.ModelSerializer):
         print(expense_users)
         for eu in expense_users:
             UserExpense.objects.create(expense=expense, **eu)
+        return expense
+
+    def update(self, expense, validated_data):
+        expense_users = validated_data.pop('userexpense_set')
+
+        expense.category = validated_data.get('category')
+        expense.description = validated_data.get('description')
+        expense.total_amount = validated_data.get('total_amount')
+        expense.group = validated_data.get('group')
+        uid_set = set()
+        for eu in expense_users:
+            uid_set.add(eu.get('user'))
+        print(uid_set)
+        if len(uid_set) != len(expense_users):
+            raise ValidationError("User Expenses must be unique")
+        expense.userexpense_set.all().delete()
+        for eu in expense_users:
+            UserExpense.objects.create(expense=expense, **eu)
+        expense.save()
         return expense
 
     class Meta(object):

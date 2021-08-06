@@ -208,6 +208,7 @@ class ExpenseCRUDTestsLevel1(TestCase):
 
     def test_expense_update(self):
         updated_expense = {
+            'category': 1,
             'description': 'culpa',
             'total_amount': '200',
             'users': [
@@ -225,9 +226,11 @@ class ExpenseCRUDTestsLevel1(TestCase):
         }
         c_put = self.client.put('/api/v1/expenses/1/', updated_expense, **self.c_auth)
         b_put = self.client.put('/api/v1/expenses/1/', updated_expense, **self.b_auth)
-        print(c_put)
-        print(b_put)
+        a_put = self.client.put('/api/v1/expenses/1/', updated_expense, **self.a_auth)
+        assert c_put.status_code != 200 and b_put.status_code == 200 and a_put.status_code == 200
 
     def test_expense_delete(self):
-        user_headers = auth_header(get_a_token(self.client))
-        otherguy_headers = auth_header(get_a_token(self.client))
+        c_del = self.client.put('/api/v1/expenses/1/', **self.c_auth)
+        b_del = self.client.put('/api/v1/expenses/1/', **self.b_auth)
+        a_del = self.client.put('/api/v1/expenses/1/', **self.a_auth)
+        assert c_del.status_code != 200 and b_del.status_code == 200 and a_del.status_code == 200

@@ -90,14 +90,8 @@ class ExpenseViewSet(viewsets.ModelViewSet):
         for the currently authenticated user.
         """
         user = self.request.user
-        expenses = []
-        for userExpense in user.userexpense_set.all():
-            print('userExpense.expense', userExpense.expense.id)
-            expenses.append(userExpense.expense)
-        print('________________________')
-        print(expenses)
-        print('________________________')
-        return expenses
+        return Expense.objects.filter(userexpense__in=user.userexpense_set.all())
+
 
 
 class UserExpenseViewSet(viewsets.ModelViewSet):
