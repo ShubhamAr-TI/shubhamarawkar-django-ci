@@ -21,15 +21,10 @@ def index(request):
     return HttpResponse("Hello, world. You're at Rest.")
 
 
-
 class Logout(APIView):
-    permission_classes = [AllowAny]
-
     def post(self, request):
-        if request.user.is_authenticated:
-            request.user.auth_token.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        return Response(status=status.HTTP_404_NOT_FOUND)
+        request.user.auth_token.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class Balances(APIView):
