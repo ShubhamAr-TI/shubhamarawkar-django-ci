@@ -1,13 +1,11 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-from django.http import HttpResponse, Http404
-from rest_framework import status, generics, filters
+from django.http import HttpResponse
+from rest_framework import status, filters
 # Create your views here.
 from rest_framework import viewsets
 from rest_framework.authtoken.admin import User
-from rest_framework.decorators import action
-from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
