@@ -83,7 +83,7 @@ class GroupViewSet(viewsets.ModelViewSet):
     def expenses(self, request, pk=None):
         expenses = Expense.objects.filter(group_id=pk).all()
         serializer = ExpenseSerializer(expenses, many=True)
-        return Response(serializer.data)
+        return Response(serializer.data, status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=False, methods=['get'])
     def balances(self, request, pk=None):
