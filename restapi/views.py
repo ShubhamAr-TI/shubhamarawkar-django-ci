@@ -41,15 +41,6 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [AllowAny]
-    # def get_permissions(self):
-    #     """
-    #     Instantiates and returns the list of permissions that this view requires.
-    #     """
-    #     if self.action == 'create':
-    #         permission_classes = [AllowAny]
-    #     else:
-    #         permission_classes = [IsAuthenticated]
-    #     return [permission() for permission in permission_classes]
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -68,7 +59,6 @@ class GroupViewSet(viewsets.ModelViewSet):
     serializer_class = GroupSerializer
     filter_backends = [filters.SearchFilter]
     search_fields = ['name']
-    search_fields = ['name']
 
     def get_queryset(self):
         """
@@ -84,26 +74,6 @@ class GroupViewSet(viewsets.ModelViewSet):
         }
         serializer.save(**kwargs)
 
-    # def update(self, request, *args, **kwargs):
-    #     instance = self.get_object()
-    #     if not instance.members.filter(id=request.user.id):
-    #         raise PermissionDenied({"message": "You don't have permission to access",
-    #                                 "object_id": instance.id})
-    #     self.perform_update(instance)
-
-
-    def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        if not instance.members.filter(id=request.user.id):
-            raise PermissionDenied({"message": "You don't have permission to access",
-                                    "object_id": instance.id})
-        self.perform_destroy(instance)
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-
-
-
 
 class ExpenseViewSet(viewsets.ModelViewSet):
     """
@@ -111,6 +81,20 @@ class ExpenseViewSet(viewsets.ModelViewSet):
     """
     queryset = Expense.objects.all()
     serializer_class = ExpenseSerializer
+
+    def get_queryset(self):
+        """
+        This view should return a list of all the Groups
+        for the currently authenticated user.
+        """
+        user = self.request.user
+        return
+
+    def perform_create(self, serializer):
+        kwargs = {
+            'user': self.request.user  # Change 'user' to you model user field.
+        }
+        serializer.save(**kwargs)
 
 
 class UserExpenseViewSet(viewsets.ModelViewSet):
