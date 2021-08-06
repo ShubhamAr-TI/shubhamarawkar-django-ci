@@ -29,6 +29,7 @@ class Logout(APIView):
         if request.user.is_authenticated:
             request.user.auth_token.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_404_NOT_FOUND)
 
 
 class Balances(APIView):

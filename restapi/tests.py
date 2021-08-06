@@ -56,7 +56,44 @@ class UserTests(TestCase):
         resp = self.client.get('/api/v1/users/1/')
         print(resp)
         assert resp.status_code == 200
-
         resp = self.client.get('/api/v1/users/10000/')
         print(resp)
         assert resp.status_code == 404
+
+
+class AuthTests(TestCase):
+
+    def setUp(self):
+        self.client = Client()
+
+    def tearDown(self):
+        pass
+
+    def test_bad_response(self):
+        auth_resp = self.client.post('/api/v1/auth/login/', {'username': 'asdf', 'password': 'asdfadf'})
+        assert auth_resp.status_code == 400
+        auth_resp = self.client.post('/api/v1/auth/login/', {'username': 'asdf'})
+        assert auth_resp.status_code == 400
+        auth_resp = self.client.post('/api/v1/auth/login/', {'password': 'asdf'})
+        assert auth_resp.status_code == 400
+
+    def test_token_generation(self):
+        user, resp = create_user(self.client, add_user=True, add_password=True)
+        auth_resp = self.client.post('/api/v1/auth/login/', user)
+        assert 'token' in auth_resp.json()
+        token = auth_resp.json()['token']
+        headers = {
+            'HTTP_AUTHORIZATION': f"Bearer {token}"
+        }
+        auth_resp = self.client.post('/api/v1/auth/login/', user)
+        assert 'token' in auth_resp.json()
+        token2 = auth_resp.json()['token']
+        assert  token2 == token
+        auth_resp = self.client.post('/api/v1/auth/logout/', **headers)
+        assert auth_resp.status_code == 204
+
+        auth_resp = self.client.post('/api/v1/auth/logout/', **headers)
+        assert auth_resp.status_code == 404
+
+
+
