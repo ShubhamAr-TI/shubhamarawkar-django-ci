@@ -17,7 +17,6 @@ from restapi.serializers import UserSerializer, CategorySerializer, ExpenseSeria
 
 # from django.shortcuts import render
 
-
 def index(request):
     return HttpResponse("Hello, world. You're at Rest.")
 
@@ -28,7 +27,7 @@ class Logout(APIView):
     def post(self, request):
         if request.user.is_authenticated:
             request.user.auth_token.delete()
-            return Response(status=status.HTTP_200_OK)
+            return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class Balances(APIView):
