@@ -8,8 +8,8 @@ from restapi.views import *
 router = DefaultRouter()
 router.register(r'users', UserViewSet)
 router.register(r'categories', CategoryViewSet)
+router.register(r'groups', GroupViewSet)
 router.register(r'expenses', ExpenseViewSet)
-router.register(r'userexpense', UserExpenseViewSet)
 
 urlpatterns = [
     path('auth/login/', views.obtain_auth_token),

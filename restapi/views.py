@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-from django.http import HttpResponse
-from rest_framework import status, generics
+from django.http import HttpResponse, Http404
+from rest_framework import status, generics, filters
 # Create your views here.
 from rest_framework import viewsets
 from rest_framework.authtoken.admin import User
+from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -64,6 +66,43 @@ class GroupViewSet(viewsets.ModelViewSet):
     """
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['name']
+    search_fields = ['name']
+
+    def get_queryset(self):
+        """
+        This view should return a list of all the Groups
+        for the currently authenticated user.
+        """
+        user = self.request.user
+        return user.group_set.all()
+
+    def perform_create(self, serializer):
+        kwargs = {
+            'user': self.request.user  # Change 'user' to you model user field.
+        }
+        serializer.save(**kwargs)
+
+    # def update(self, request, *args, **kwargs):
+    #     instance = self.get_object()
+    #     if not instance.members.filter(id=request.user.id):
+    #         raise PermissionDenied({"message": "You don't have permission to access",
+    #                                 "object_id": instance.id})
+    #     self.perform_update(instance)
+
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if not instance.members.filter(id=request.user.id):
+            raise PermissionDenied({"message": "You don't have permission to access",
+                                    "object_id": instance.id})
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+
+
 
 
 class ExpenseViewSet(viewsets.ModelViewSet):

@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 
 import logging
 from datetime import datetime
+from random import random
 
 from django.test import Client
 from django.test import TestCase
@@ -13,7 +14,7 @@ log = logging.getLogger("TEST")
 def create_user(client, add_user=None, add_password=None):
     user_payload = {}
     if add_user is not None:
-        user_payload['username'] = f"user_{int(datetime.now().timestamp())}"
+        user_payload['username'] = f"user_{int(random() * 1e6)}"
     if add_password is not None:
         user_payload['password'] = f"password_{int(datetime.now().timestamp())}"
     print("USER PAYLOAD:", user_payload)
@@ -21,6 +22,20 @@ def create_user(client, add_user=None, add_password=None):
     print("POST RESPONSE CODE:", resp.status_code)
     print("POST BODY:", resp.json())
     return user_payload, resp
+
+
+def get_a_token(client):
+    user, resp = create_user(client, add_user=True, add_password=True)
+    auth_resp = client.post('/api/v1/auth/login/', user)
+    assert 'token' in auth_resp.json()
+    return auth_resp.json()['token']
+
+
+def auth_header(token):
+    return {
+        'HTTP_AUTHORIZATION': f"Token {token}",
+        'content_type': "application/json"
+    }
 
 
 # Create your tests here.
@@ -83,21 +98,72 @@ class AuthTests(TestCase):
         assert 'token' in auth_resp.json()
         token = auth_resp.json()['token']
         headers = {
-            'HTTP_AUTHORIZATION': f"Bearer {token}"
+            'HTTP_AUTHORIZATION': f"Token {token}"
         }
         auth_resp = self.client.post('/api/v1/auth/login/', user)
         assert 'token' in auth_resp.json()
         token2 = auth_resp.json()['token']
-        assert  token2 == token
+        assert token2 == token
         auth_resp = self.client.post('/api/v1/auth/logout/', **headers)
         assert auth_resp.status_code == 204
 
-        auth_resp = self.client.post('/api/v1/auth/logout/', **headers)
-        assert auth_resp.status_code == 404
-
-    def test_404_logout(self):
+    def test_401_logout(self):
         auth_resp = self.client.post('/api/v1/auth/logout/')
-        assert auth_resp.status_code == 404
+        assert auth_resp.status_code == 401
 
 
+class GroupTests(TestCase):
+
+    def setUp(self):
+        self.client = Client()
+
+    def tearDown(self):
+        pass
+
+    def test_group_get(self):
+        user_headers = auth_header(get_a_token(self.client))
+        otherguy_headers = auth_header(get_a_token(self.client))
+        x = self.client.post("/api/v1/groups/", {"name": "TestGroup"}, **user_headers)
+        assert x.status_code == 201
+        group = x.json()
+        print("GROUP CREATED", group)
+        assert 'id' in group
+        assert 'members' in group
+
+        x = self.client.get(f"/api/v1/groups/{group['id']}/", **user_headers)
+        y = self.client.get(f"/api/v1/groups/{group['id']}/", **otherguy_headers)
+        assert x.status_code == 200 and y.status_code == 404
+
+
+    def test_group_update(self):
+        user_headers = auth_header(get_a_token(self.client))
+        otherguy_headers = auth_header(get_a_token(self.client))
+        x = self.client.post("/api/v1/groups/", {"name": "TestGroup"}, **user_headers)
+        assert x.status_code == 201
+        group = x.json()
+        print("GROUP CREATED", group)
+        assert 'id' in group
+        assert 'members' in group
+        group_id = x.json()['id']
+        new_name = f"{int(random() * 1e6)}"
+        x = self.client.put(f"/api/v1/groups/{group_id}/", {"name": new_name}, **user_headers)
+        print(x.json())
+        # assert x.status_code == 201
+        assert x.json()['name'] == new_name
+        x = self.client.put(f"/api/v1/groups/{group_id}/", {"name": new_name}, **otherguy_headers)
+        assert x.status_code == 401 or x.status_code == 404 #FIXME is this correct
+
+    def test_group_delete(self):
+        user_headers = auth_header(get_a_token(self.client))
+        otherguy_headers = auth_header(get_a_token(self.client))
+        x = self.client.post("/api/v1/groups/", {"name": "TestGroup"}, **user_headers)
+        assert x.status_code == 201
+        group = x.json()
+        print("GROUP CREATED", group)
+        assert 'id' in group
+        assert 'members' in group
+
+        y = self.client.delete(f"/api/v1/groups/{group['id']}/", **otherguy_headers)
+        x = self.client.delete(f"/api/v1/groups/{group['id']}/", **user_headers)
+        assert x.status_code == 204 and y.status_code == 404
 

@@ -34,9 +34,20 @@ class CategorySerializer(serializers.ModelSerializer):
 
 
 class GroupSerializer(serializers.ModelSerializer):
+    members = UserSerializer(many=True, read_only=True)
+
+    def create(self, validated_data):
+        user = validated_data.pop('user')
+        group = Group.objects.create(**validated_data)
+        group.members.set([user])
+        return group
+
     class Meta:
         model = Group
         fields = "__all__"
+        extra_kwargs = {
+            'members': {'read_only': True}
+        }
 
 
 class UserExpenseSerializer(serializers.ModelSerializer):
