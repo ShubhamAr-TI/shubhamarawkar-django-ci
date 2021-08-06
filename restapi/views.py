@@ -2,7 +2,7 @@
 from __future__ import unicode_literals
 
 from django.http import HttpResponse
-from rest_framework import status
+from rest_framework import status, generics
 # Create your views here.
 from rest_framework import viewsets
 from rest_framework.authtoken.admin import User
@@ -19,6 +19,7 @@ from restapi.serializers import UserSerializer, CategorySerializer, ExpenseSeria
 
 def index(request):
     return HttpResponse("Hello, world. You're at Rest.")
+
 
 
 class Logout(APIView):
