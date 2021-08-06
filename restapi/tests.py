@@ -178,45 +178,11 @@ class ExpenseCRUDTestsLevel1(TestCase):
     def test_expense_get(self):
         user_headers = auth_header(get_a_token(self.client))
         otherguy_headers = auth_header(get_a_token(self.client))
-        x = self.client.post(f"/api/v1/expense/", {"name": "Name"}, **user_headers)
-        assert x.status_code == 201
-        group = x.json()
-        print("GROUP CREATED", group)
-        assert 'id' in group
-        assert 'members' in group
-
-        x = self.client.get(f"/api/v1/groups/{group['id']}/", **user_headers)
-        y = self.client.get(f"/api/v1/groups/{group['id']}/", **otherguy_headers)
-        assert x.status_code == 200 and y.status_code == 404
 
     def test_expense_update(self):
         user_headers = auth_header(get_a_token(self.client))
         otherguy_headers = auth_header(get_a_token(self.client))
-        x = self.client.post(f"/api/v1/groups/", {"name": "TestGroup"}, **user_headers)
-        assert x.status_code == 201
-        group = x.json()
-        print("GROUP CREATED", group)
-        assert 'id' in group
-        assert 'members' in group
-        group_id = x.json()['id']
-        new_name = f"{int(random() * 1e6)}"
-        x = self.client.put(f"/api/v1/groups/{group_id}/", {"name": new_name}, **user_headers)
-        print(x.json())
-        # assert x.status_code == 201
-        assert x.json()['name'] == new_name
-        x = self.client.put(f"/api/v1/groups/{group_id}/", {"name": new_name}, **otherguy_headers)
-        assert x.status_code == 401 or x.status_code == 404  # FIXME: is this correct
 
     def test_expense_delete(self):
         user_headers = auth_header(get_a_token(self.client))
         otherguy_headers = auth_header(get_a_token(self.client))
-        x = self.client.post(f"/api/v1/groups/", {"name": "TestGroup"}, **user_headers)
-        assert x.status_code == 201
-        group = x.json()
-        print("GROUP CREATED", group)
-        assert 'id' in group
-        assert 'members' in group
-
-        y = self.client.delete(f"/api/v1/groups/{group['id']}/", **otherguy_headers)
-        x = self.client.delete(f"/api/v1/groups/{group['id']}/", **user_headers)
-        assert x.status_code == 204 and y.status_code == 404
