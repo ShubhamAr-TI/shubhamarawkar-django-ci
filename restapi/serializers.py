@@ -32,7 +32,7 @@ class UserSerializer(serializers.ModelSerializer):
 class CategorySerializer(serializers.ModelSerializer):
     class Meta(object):
         model = Category
-        fields = "__all__"
+        fields = '__all__'
 
 
 class GroupSerializer(serializers.ModelSerializer):
@@ -46,7 +46,7 @@ class GroupSerializer(serializers.ModelSerializer):
 
     class Meta(object):
         model = Group
-        fields = "__all__"
+        fields = '__all__'
         extra_kwargs = {
             'members': {'read_only': True}
         }
@@ -55,7 +55,7 @@ class GroupSerializer(serializers.ModelSerializer):
 class UserExpenseSerializer(serializers.ModelSerializer):
     class Meta(object):
         model = UserExpense
-        fields = ["user", "amount_owed", "amount_lent"]
+        fields = ['user', 'amount_owed', 'amount_lent']
 
 
 class ExpenseSerializer(serializers.ModelSerializer):
@@ -72,4 +72,4 @@ class ExpenseSerializer(serializers.ModelSerializer):
 
     class Meta(object):
         model = Expense
-        fields = "__all__"
+        fields = '__all__'

@@ -18,7 +18,7 @@ class Group(models.Model):
 
 class Expense(models.Model):
     description = models.CharField(
-        max_length=200, default="default description")
+        max_length=200, default='default description')
     category = models.ForeignKey(
         Category,
         on_delete=models.CASCADE,

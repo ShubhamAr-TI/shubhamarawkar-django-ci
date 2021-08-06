@@ -20,7 +20,7 @@ User = get_user_model()
 # from django.shortcuts import render
 
 def index(request):
-    return HttpResponse("Hello, world. You're at Rest.")
+    return HttpResponse('Hello, world. You\'re at Rest.')
 
 
 class Logout(APIView):
@@ -31,7 +31,7 @@ class Logout(APIView):
 
 class Balances(APIView):
     def get(self, request):
-        print("wassup")
+        print('wassup')
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -92,7 +92,11 @@ class ExpenseViewSet(viewsets.ModelViewSet):
         user = self.request.user
         expenses = []
         for userExpense in user.userexpense_set.all():
+            print('userExpense.expense', userExpense.expense.id)
             expenses.append(userExpense.expense)
+        print('________________________')
+        print(expenses)
+        print('________________________')
         return expenses
 
 

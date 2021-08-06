@@ -8,19 +8,19 @@ from random import random
 from django.test import Client
 from django.test import TestCase
 
-log = logging.getLogger("TEST")
+log = logging.getLogger('TEST')
 
 
 def create_user(client, add_user=None, add_password=None):
     user_payload = {}
     if add_user is not None:
-        user_payload['username'] = f"user_{int(random() * 1e6)}"
+        user_payload['username'] = f'user_{int(random() * 1e6)}'
     if add_password is not None:
-        user_payload['password'] = f"password_{int(datetime.now().timestamp())}"
-    # print("USER PAYLOAD:", user_payload)
+        user_payload['password'] = f'password_{int(datetime.now().timestamp())}'
+    # print('USER PAYLOAD:', user_payload)
     resp = client.post('/api/v1/users/', user_payload)
-    # print("POST RESPONSE CODE:", resp.status_code)
-    # print("POST BODY:", resp.json())
+    # print('POST RESPONSE CODE:', resp.status_code)
+    # print('POST BODY:', resp.json())
     return user_payload, resp
 
 
@@ -33,8 +33,8 @@ def get_a_token(client):
 
 def auth_header(token):
     return {
-        'HTTP_AUTHORIZATION': f"Token {token}",
-        'content_type': "application/json"
+        'HTTP_AUTHORIZATION': f'Token {token}',
+        'content_type': 'application/json'
     }
 
 
@@ -98,7 +98,7 @@ class AuthTests(TestCase):
         assert 'token' in auth_resp.json()
         token = auth_resp.json()['token']
         headers = {
-            'HTTP_AUTHORIZATION': f"Token {token}"
+            'HTTP_AUTHORIZATION': f'Token {token}'
         }
         auth_resp = self.client.post('/api/v1/auth/login/', user)
         assert 'token' in auth_resp.json()
@@ -123,10 +123,10 @@ class GroupCRUDTestsLevel1(TestCase):
     def test_group_get(self):
         user_headers = auth_header(get_a_token(self.client))
         otherguy_headers = auth_header(get_a_token(self.client))
-        x = self.client.post(f"/api/v1/groups/", {"name": "TestGroup"}, **user_headers)
+        x = self.client.post(f'/api/v1/groups/', {'name': 'TestGroup'}, **user_headers)
         assert x.status_code == 201
         group = x.json()
-        print("GROUP CREATED", group)
+        print('GROUP CREATED', group)
         assert 'id' in group
         assert 'members' in group
 
@@ -137,28 +137,28 @@ class GroupCRUDTestsLevel1(TestCase):
     def test_group_update(self):
         user_headers = auth_header(get_a_token(self.client))
         otherguy_headers = auth_header(get_a_token(self.client))
-        x = self.client.post(f"/api/v1/groups/", {"name": "TestGroup"}, **user_headers)
+        x = self.client.post(f'/api/v1/groups/', {'name': 'TestGroup'}, **user_headers)
         assert x.status_code == 201
         group = x.json()
-        print("GROUP CREATED", group)
+        print('GROUP CREATED', group)
         assert 'id' in group
         assert 'members' in group
         group_id = x.json()['id']
-        new_name = f"{int(random() * 1e6)}"
-        x = self.client.put(f"/api/v1/groups/{group_id}/", {"name": new_name}, **user_headers)
+        new_name = f'{int(random() * 1e6)}'
+        x = self.client.put(f'/api/v1/groups/{group_id}/', {'name': new_name}, **user_headers)
         print(x.json())
         # assert x.status_code == 201
         assert x.json()['name'] == new_name
-        x = self.client.put(f"/api/v1/groups/{group_id}/", {"name": new_name}, **otherguy_headers)
+        x = self.client.put(f'/api/v1/groups/{group_id}/', {'name': new_name}, **otherguy_headers)
         assert x.status_code == 401 or x.status_code == 404  # FIXME is this correct
 
     def test_group_delete(self):
         user_headers = auth_header(get_a_token(self.client))
         otherguy_headers = auth_header(get_a_token(self.client))
-        x = self.client.post(f"/api/v1/groups/", {"name": "TestGroup"}, **user_headers)
+        x = self.client.post(f'/api/v1/groups/', {'name': 'TestGroup'}, **user_headers)
         assert x.status_code == 201
         group = x.json()
-        print("GROUP CREATED", group)
+        print('GROUP CREATED', group)
         assert 'id' in group
         assert 'members' in group
 
@@ -174,27 +174,27 @@ class ExpenseCRUDTestsLevel1(TestCase):
         self.a_auth = auth_header(get_a_token(self.client))
         self.b_auth = auth_header(get_a_token(self.client))
         self.c_auth = auth_header(get_a_token(self.client))
-        self.cat = self.client.post(f"/api/v1/categories/", {"name": "Dummy Cat"}, **self.a_auth)
+        self.cat = self.client.post(f'/api/v1/categories/', {'name': 'Dummy Cat'}, **self.a_auth)
 
-        self.expense = self.client.post(f"/api/v1/expenses/",
+        self.expense = self.client.post(f'/api/v1/expenses/',
                                         {
-                                            "category": 1,
-                                            "description": "culpa",
-                                            "total_amount": "150",
-                                            "users": [
+                                            'category': 1,
+                                            'description': 'culpa',
+                                            'total_amount': '150',
+                                            'users': [
                                                 {
-                                                    "amount_lent": "100",
-                                                    "amount_owed": "100",
-                                                    "user": 1
+                                                    'amount_lent': '100',
+                                                    'amount_owed': '100',
+                                                    'user': 1
                                                 },
                                                 {
-                                                    "amount_lent": "50",
-                                                    "amount_owed": "50",
-                                                    "user": 2
+                                                    'amount_lent': '50',
+                                                    'amount_owed': '50',
+                                                    'user': 2
                                                 }
                                             ]
                                         }, **self.a_auth)
-        print(self.expense.jso())
+        print(self.expense.json())
         print(self.cat, self.expense.json())
 
     def tearDown(self):
@@ -208,18 +208,18 @@ class ExpenseCRUDTestsLevel1(TestCase):
 
     def test_expense_update(self):
         updated_expense = {
-            "description": "culpa",
-            "total_amount": "200",
-            "users": [
+            'description': 'culpa',
+            'total_amount': '200',
+            'users': [
                 {
-                    "amount_lent": "150",
-                    "amount_owed": "150",
-                    "user": 1
+                    'amount_lent': '150',
+                    'amount_owed': '150',
+                    'user': 1
                 },
                 {
-                    "amount_lent": "50",
-                    "amount_owed": "100",
-                    "user": 2
+                    'amount_lent': '50',
+                    'amount_owed': '100',
+                    'user': 2
                 }
             ]
         }
