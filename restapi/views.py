@@ -6,6 +6,7 @@ from django.http import HttpResponse
 from rest_framework import status, filters
 # Create your views here.
 from rest_framework import viewsets
+from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -20,7 +21,7 @@ User = get_user_model()
 # from django.shortcuts import render
 
 def index(request):
-    return HttpResponse('Hello, world. You\'re at Rest.')
+    return HttpResponse('Hello, world. You\'re at Rest.' + request.user)
 
 
 class Logout(APIView):
@@ -31,7 +32,7 @@ class Logout(APIView):
 
 class Balances(APIView):
     def get(self, request):
-        print('wassup')
+        print('wassup', request.user)
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -70,9 +71,23 @@ class GroupViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         kwargs = {
-            'user': self.request.user  # Change 'user' to you model user field.
+            'user': self.request.user
         }
         serializer.save(**kwargs)
+
+    @action(detail=False, methods=['put'], url_path="members")
+    def members(self, request, pk=None):
+        pass
+
+    @action(detail=True, methods=['get'], url_path="expenses")
+    def expenses(self, request, pk=None):
+        expenses = Expense.objects.filter(group_id=pk).all()
+        serializer = ExpenseSerializer(expenses, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def balances(self, request, pk=None):
+        pass
 
 
 class ExpenseViewSet(viewsets.ModelViewSet):
@@ -91,7 +106,6 @@ class ExpenseViewSet(viewsets.ModelViewSet):
         """
         user = self.request.user
         return Expense.objects.filter(userexpense__in=user.userexpense_set.all())
-
 
 
 class UserExpenseViewSet(viewsets.ModelViewSet):

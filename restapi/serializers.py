@@ -63,10 +63,14 @@ class ExpenseSerializer(serializers.ModelSerializer):
     users = UserExpenseSerializer(source='userexpense_set', many=True)
 
     def create(self, validated_data):
-        print(validated_data)
         expense_users = validated_data.pop('userexpense_set')
         expense = Expense.objects.create(**validated_data)
-        print(expense_users)
+
+        uid_set = set()
+        for eu in expense_users:
+            uid_set.add(eu.get('user'))
+        if len(uid_set) != len(expense_users):
+            raise ValidationError("User Expenses must be unique")
         for eu in expense_users:
             UserExpense.objects.create(expense=expense, **eu)
         return expense

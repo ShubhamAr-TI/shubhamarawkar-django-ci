@@ -2,7 +2,7 @@ from django.urls import path
 from rest_framework.authtoken import views
 from rest_framework.routers import DefaultRouter
 
-from restapi.views import *
+from restapi.views import UserViewSet, CategoryViewSet, GroupViewSet, ExpenseViewSet, Logout, Balances
 
 router = DefaultRouter()
 router.register(r'users', UserViewSet)

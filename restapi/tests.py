@@ -200,6 +200,28 @@ class ExpenseCRUDTestsLevel1(TestCase):
     def tearDown(self):
         pass
 
+    def test_duplicate_user_expense(self):
+        a_post = self.client.post(f'/api/v1/expenses/',
+                                  {
+                                      'category': 1,
+                                      'description': 'culpa',
+                                      'total_amount': '150',
+                                      'users': [
+                                          {
+                                              'amount_lent': '100',
+                                              'amount_owed': '100',
+                                              'user': 1
+                                          },
+                                          {
+                                              'amount_lent': '50',
+                                              'amount_owed': '50',
+                                              'user': 1
+                                          }
+                                      ]
+                                  }, **self.a_auth)
+        print(a_post)
+        assert a_post.status_code != 200
+
     def test_expense_get(self):
         a_get = self.client.get('/api/v1/expenses/', **self.a_auth)
         b_get = self.client.get('/api/v1/expenses/', **self.b_auth)
@@ -234,3 +256,54 @@ class ExpenseCRUDTestsLevel1(TestCase):
         b_del = self.client.put('/api/v1/expenses/1/', **self.b_auth)
         a_del = self.client.put('/api/v1/expenses/1/', **self.a_auth)
         assert c_del.status_code != 200 and b_del.status_code == 200 and a_del.status_code == 200
+
+    def test_expense_duplicate_update(self):
+        updated_expense = {
+            'category': 1,
+            'description': 'culpa',
+            'total_amount': '200',
+            'users': [
+                {
+                    'amount_lent': '150',
+                    'amount_owed': '150',
+                    'user': 1
+                },
+                {
+                    'amount_lent': '50',
+                    'amount_owed': '100',
+                    'user': 1
+                }
+            ]
+        }
+        a_put = self.client.put('/api/v1/expenses/1/', updated_expense, **self.a_auth)
+        print(a_put.json())
+
+    def test_group_expenses(self):
+        x = self.client.post(f'/api/v1/groups/', {'name': 'TestGroup'}, **self.a_auth)
+        assert x.status_code == 201
+        group = x.json()
+        print('GROUP CREATED', group)
+        assert 'id' in group
+        assert 'members' in group
+        expense = {
+            'group': 1,
+            'category': 1,
+            'description': 'culpa',
+            'total_amount': '200',
+            'users': [
+                {
+                    'amount_lent': '150',
+                    'amount_owed': '150',
+                    'user': 1
+                },
+                {
+                    'amount_lent': '50',
+                    'amount_owed': '100',
+                    'user': 2
+                }
+            ]
+        }
+        exp = self.client.post("/api/v1/expenses/", expense, **self.a_auth)
+
+        group_expenses = self.client.get("/api/v1/groups/1/expenses/", **self.a_auth)
+        print(group_expenses.json())
