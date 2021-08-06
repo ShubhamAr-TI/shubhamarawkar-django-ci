@@ -17,10 +17,10 @@ def create_user(client, add_user=None, add_password=None):
         user_payload['username'] = f"user_{int(random() * 1e6)}"
     if add_password is not None:
         user_payload['password'] = f"password_{int(datetime.now().timestamp())}"
-    print("USER PAYLOAD:", user_payload)
+    # print("USER PAYLOAD:", user_payload)
     resp = client.post('/api/v1/users/', user_payload)
-    print("POST RESPONSE CODE:", resp.status_code)
-    print("POST BODY:", resp.json())
+    # print("POST RESPONSE CODE:", resp.status_code)
+    # print("POST BODY:", resp.json())
     return user_payload, resp
 
 
@@ -171,17 +171,62 @@ class ExpenseCRUDTestsLevel1(TestCase):
 
     def setUp(self):
         self.client = Client()
+        self.a_auth = auth_header(get_a_token(self.client))
+        self.b_auth = auth_header(get_a_token(self.client))
+        self.c_auth = auth_header(get_a_token(self.client))
+        self.cat = self.client.post(f"/api/v1/categories/", {"name": "Dummy Cat"}, **self.a_auth)
+
+        self.expense = self.client.post(f"/api/v1/expenses/",
+                                        {
+                                            "category": 1,
+                                            "description": "culpa",
+                                            "total_amount": "150",
+                                            "users": [
+                                                {
+                                                    "amount_lent": "100",
+                                                    "amount_owed": "100",
+                                                    "user": 1
+                                                },
+                                                {
+                                                    "amount_lent": "50",
+                                                    "amount_owed": "50",
+                                                    "user": 2
+                                                }
+                                            ]
+                                        }, **self.a_auth)
+        print(self.expense.jso())
+        print(self.cat, self.expense.json())
 
     def tearDown(self):
         pass
 
     def test_expense_get(self):
-        user_headers = auth_header(get_a_token(self.client))
-        otherguy_headers = auth_header(get_a_token(self.client))
+        a_get = self.client.get('/api/v1/expenses/', **self.a_auth)
+        b_get = self.client.get('/api/v1/expenses/', **self.b_auth)
+        c_get = self.client.get('/api/v1/expenses/', **self.c_auth)
+        print(a_get.json()['count'], b_get.json()['count'], c_get.json()['count'])
 
     def test_expense_update(self):
-        user_headers = auth_header(get_a_token(self.client))
-        otherguy_headers = auth_header(get_a_token(self.client))
+        updated_expense = {
+            "description": "culpa",
+            "total_amount": "200",
+            "users": [
+                {
+                    "amount_lent": "150",
+                    "amount_owed": "150",
+                    "user": 1
+                },
+                {
+                    "amount_lent": "50",
+                    "amount_owed": "100",
+                    "user": 2
+                }
+            ]
+        }
+        c_put = self.client.put('/api/v1/expenses/1/', updated_expense, **self.c_auth)
+        b_put = self.client.put('/api/v1/expenses/1/', updated_expense, **self.b_auth)
+        print(c_put)
+        print(b_put)
 
     def test_expense_delete(self):
         user_headers = auth_header(get_a_token(self.client))

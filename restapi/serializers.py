@@ -1,7 +1,9 @@
+from django.contrib.auth import get_user_model
 from rest_framework import serializers
-from rest_framework.authtoken.admin import User
 
 from restapi.models import Category, Group, UserExpense, Expense
+
+User = get_user_model()
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -17,7 +19,7 @@ class UserSerializer(serializers.ModelSerializer):
         user.save()
         return user
 
-    class Meta:
+    class Meta(object):
         model = User
         fields = ('id', 'username', 'password')
 
@@ -28,7 +30,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class CategorySerializer(serializers.ModelSerializer):
-    class Meta:
+    class Meta(object):
         model = Category
         fields = "__all__"
 
@@ -42,7 +44,7 @@ class GroupSerializer(serializers.ModelSerializer):
         group.members.set([user])
         return group
 
-    class Meta:
+    class Meta(object):
         model = Group
         fields = "__all__"
         extra_kwargs = {
@@ -51,9 +53,9 @@ class GroupSerializer(serializers.ModelSerializer):
 
 
 class UserExpenseSerializer(serializers.ModelSerializer):
-    class Meta:
+    class Meta(object):
         model = UserExpense
-        fields = "__all__"
+        fields = ["user", "amount_owed", "amount_lent"]
 
 
 class ExpenseSerializer(serializers.ModelSerializer):
@@ -63,10 +65,11 @@ class ExpenseSerializer(serializers.ModelSerializer):
         print(validated_data)
         expense_users = validated_data.pop('userexpense_set')
         expense = Expense.objects.create(**validated_data)
+        print(expense_users)
         for eu in expense_users:
             UserExpense.objects.create(expense=expense, **eu)
         return expense
 
-    class Meta:
+    class Meta(object):
         model = Expense
-        fields = ["category", 'description', 'total_amount', 'users']
+        fields = "__all__"

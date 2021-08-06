@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
+from django.contrib.auth import get_user_model
 from django.http import HttpResponse
 from rest_framework import status, filters
 # Create your views here.
 from rest_framework import viewsets
-from rest_framework.authtoken.admin import User
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -13,6 +13,8 @@ from rest_framework.views import APIView
 from restapi.models import Category, Expense, UserExpense, Group
 from restapi.serializers import UserSerializer, CategorySerializer, ExpenseSerializer, UserExpenseSerializer, \
     GroupSerializer
+
+User = get_user_model()
 
 
 # from django.shortcuts import render
@@ -79,20 +81,19 @@ class ExpenseViewSet(viewsets.ModelViewSet):
     """
     queryset = Expense.objects.all()
     serializer_class = ExpenseSerializer
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['description']
 
     def get_queryset(self):
         """
-        This view should return a list of all the Groups
+        This view should return a list of all the Expenses
         for the currently authenticated user.
         """
         user = self.request.user
-        return
-
-    def perform_create(self, serializer):
-        kwargs = {
-            'user': self.request.user  # Change 'user' to you model user field.
-        }
-        serializer.save(**kwargs)
+        expenses = []
+        for userExpense in user.userexpense_set.all():
+            expenses.append(userExpense.expense)
+        return expenses
 
 
 class UserExpenseViewSet(viewsets.ModelViewSet):
