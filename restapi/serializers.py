@@ -139,11 +139,11 @@ class ExpenseSerializer(serializers.ModelSerializer):
             assert min([x.get('amount_lent') for x in expense_users]) >= 0
             assert len(set(users)) == len(users)
             if group:
-                pass
+                for user in users:
+                    assert group in user.group_set.all()
             else:
                 assert user in users
         except AssertionError as ae:
-            raise ae
             raise ValidationError("Data Validation Failed")
         return attrs
 
