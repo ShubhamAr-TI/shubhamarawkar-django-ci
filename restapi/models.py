@@ -33,8 +33,8 @@ class Expense(models.Model):
 
 class UserExpense(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    amount_lent = models.DecimalField(decimal_places=3, max_digits=12)
-    amount_owed = models.DecimalField(decimal_places=3, max_digits=12)
+    amount_lent = models.DecimalField(decimal_places=2, max_digits=10)
+    amount_owed = models.DecimalField(decimal_places=2, max_digits=10)
     expense = models.ForeignKey(
         Expense,
         on_delete=models.CASCADE,
