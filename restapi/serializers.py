@@ -59,47 +59,38 @@ class UserExpenseSerializer(serializers.ModelSerializer):
         fields = ['user', 'amount_owed', 'amount_lent']
 
 
+def additional_validation(validated_data):
+    expense_users = validated_data.get('userexpense_set')
+    total_owed = total_paid = validated_data.get('total_amount')
+    uid_set = set()
+    for eu in expense_users:
+        uid_set.add(eu.get('user'))
+        total_paid -= eu.get('amount_lent')
+        total_owed -= eu.get('amount_owed')
+    if len(uid_set) != len(expense_users):
+        raise ValidationError("User Expenses must be unique")
+    if abs(total_paid) > 0.005 or abs(total_owed) > 0.005:
+        raise ValidationError("Expenses are not adding up")
+
+
 class ExpenseSerializer(serializers.ModelSerializer):
     users = UserExpenseSerializer(source='userexpense_set', many=True)
 
     def create(self, validated_data):
+        additional_validation(validated_data)
         expense_users = validated_data.pop('userexpense_set')
-        total_owed = total_paid = validated_data.get('total_amount')
         expense = Expense.objects.create(**validated_data)
-        # TODO: add validator for total_paid and tottal_owed
-        uid_set = set()
-        for eu in expense_users:
-            uid_set.add(eu.get('user'))
-            total_paid -= eu.get('amount_lent')
-            total_owed -= eu.get('amount_owed')
-        if abs(total_paid) > 0.005 or abs(total_owed) > 0.005:
-            raise ValidationError("Expenses are not adding up")
-        if len(uid_set) != len(expense_users):
-            raise ValidationError("User Expenses must be unique")
         for eu in expense_users:
             UserExpense.objects.create(expense=expense, **eu)
         return expense
 
     def update(self, expense, validated_data):
+        additional_validation(validated_data)
         expense_users = validated_data.pop('userexpense_set')
-
         expense.category = validated_data.get('category')
         expense.description = validated_data.get('description')
         expense.total_amount = validated_data.get('total_amount')
-        total_owed = total_paid = validated_data.get('total_amount')
         expense.group = validated_data.get('group')
-
-        uid_set = set()
-
-        for eu in expense_users:
-            uid_set.add(eu.get('user'))
-            total_paid -= eu.get('amount_lent')
-            total_owed -= eu.get('amount_owed')
-        if abs(total_paid) > 0.005 or abs(total_owed) > 0.005:
-            raise ValidationError("Expenses are not adding up")
-        print(uid_set)
-        if len(uid_set) != len(expense_users):
-            raise ValidationError("User Expenses must be unique")
         expense.userexpense_set.all().delete()
         for eu in expense_users:
             UserExpense.objects.create(expense=expense, **eu)

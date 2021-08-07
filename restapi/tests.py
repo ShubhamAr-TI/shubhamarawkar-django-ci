@@ -222,11 +222,27 @@ class ExpenseCRUDTestsLevel1(TestCase):
         print(a_post)
         assert a_post.status_code != 200
 
-    def test_expense_get(self):
+    def test_expenses_get(self):
         a_get = self.client.get('/api/v1/expenses/', **self.a_auth)
         b_get = self.client.get('/api/v1/expenses/', **self.b_auth)
         c_get = self.client.get('/api/v1/expenses/', **self.c_auth)
-        print(a_get.json()['count'], b_get.json()['count'], c_get.json()['count'])
+        print(a_get, b_get, c_get)
+        assert a_get.json()['count'] == 1 \
+               and b_get.json()['count'] == 1 \
+               and c_get.json()['count'] == 0
+        assert a_get.json() == b_get.json()
+
+    def test_single_expense_get(self):
+        a_get = self.client.get('/api/v1/expenses/1/', **self.a_auth)
+        print(a_get.json())
+
+    def test_expense_search(self):
+        a_get = self.client.get('/api/v1/expenses/?q=cu', **self.a_auth)
+        assert a_get.status_code == 200 and a_get.json()['count'] == 1
+        a_get = self.client.get('/api/v1/expenses/?q=cud', **self.a_auth)
+        assert a_get.status_code == 200 and a_get.json()['count'] == 0
+
+
 
     def test_expense_update(self):
         updated_expense = {
@@ -236,7 +252,7 @@ class ExpenseCRUDTestsLevel1(TestCase):
             'users': [
                 {
                     'amount_lent': '150',
-                    'amount_owed': '150',
+                    'amount_owed': '100',
                     'user': 1
                 },
                 {
@@ -246,16 +262,22 @@ class ExpenseCRUDTestsLevel1(TestCase):
                 }
             ]
         }
+
         c_put = self.client.put('/api/v1/expenses/1/', updated_expense, **self.c_auth)
         b_put = self.client.put('/api/v1/expenses/1/', updated_expense, **self.b_auth)
         a_put = self.client.put('/api/v1/expenses/1/', updated_expense, **self.a_auth)
+
+        updated_reponse = a_put.json()
+        print(updated_reponse)
+        print(c_put, b_put, a_put)
         assert c_put.status_code != 200 and b_put.status_code == 200 and a_put.status_code == 200
 
     def test_expense_delete(self):
-        c_del = self.client.put('/api/v1/expenses/1/', **self.c_auth)
-        b_del = self.client.put('/api/v1/expenses/1/', **self.b_auth)
-        a_del = self.client.put('/api/v1/expenses/1/', **self.a_auth)
-        assert c_del.status_code != 200 and b_del.status_code == 200 and a_del.status_code == 200
+        c_del = self.client.delete('/api/v1/expenses/1/', **self.c_auth)
+        b_del = self.client.delete('/api/v1/expenses/1/', **self.b_auth)
+        a_del = self.client.delete('/api/v1/expenses/1/', **self.a_auth)
+        print(a_del, b_del, c_del)
+        assert c_del.status_code == 404 and b_del.status_code == 204 and a_del.status_code == 404
 
     def test_expense_duplicate_update(self):
         updated_expense = {
@@ -276,7 +298,30 @@ class ExpenseCRUDTestsLevel1(TestCase):
             ]
         }
         a_put = self.client.put('/api/v1/expenses/1/', updated_expense, **self.a_auth)
-        print(a_put.json())
+        print(a_put, a_put.json())
+        assert a_put.status_code == 400
+
+    def test_expense_incorrect_update(self):
+        updated_expense = {
+            'category': 1,
+            'description': 'culpa',
+            'total_amount': '200',
+            'users': [
+                {
+                    'amount_lent': '200',
+                    'amount_owed': '150',
+                    'user': 1
+                },
+                {
+                    'amount_lent': '50',
+                    'amount_owed': '100',
+                    'user': 1
+                }
+            ]
+        }
+        a_put = self.client.put('/api/v1/expenses/1/', updated_expense, **self.a_auth)
+        print(a_put, a_put.json())
+        assert a_put.status_code == 400
 
     def test_group_expenses(self):
         x = self.client.post(f'/api/v1/groups/', {'name': 'TestGroup'}, **self.a_auth)
@@ -304,6 +349,5 @@ class ExpenseCRUDTestsLevel1(TestCase):
             ]
         }
         exp = self.client.post("/api/v1/expenses/", expense, **self.a_auth)
-
         group_expenses = self.client.get("/api/v1/groups/1/expenses/", **self.a_auth)
-        print(group_expenses.json())
+        # print(group_expenses.json())
