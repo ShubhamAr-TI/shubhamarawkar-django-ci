@@ -302,7 +302,7 @@ class ExpenseCRUDTestsLevel1(TestCase):
 
     def test_expense_unauthorized_create(self):
         group = self.client.post(f'/api/v1/groups/', {'name': 'Dummy Group'}, **self.a_auth)
-        print("GROUP:",group.json())
+        print("GROUP:", group.json())
         expense = {
             'category': 1,
             'description': 'culpa',
@@ -397,5 +397,278 @@ class ExpenseCRUDTestsLevel1(TestCase):
         group_expenses = self.client.get("/api/v1/groups/1/expenses/", **self.a_auth)
         # print(group_expenses.json())
 
-    def test_expense_8(self):
-        expense = {"description":"Spiderman - Far From Home","total_amount":"600","category":"2","users":[{"user":"6","amount_owed":"150","amount_lent":"0"},{"user":"2","amount_owed":"150","amount_lent":"600"}]}
+
+def get_balances():
+    '''
+        dummy balance function
+    '''
+    pass
+
+
+def make_transaction(data):
+    return {"from_user": data[0], "to_user": data[1], "amount": data[2]}
+
+
+class UserTests(TestCase):
+
+    def setUp(self):
+        pass
+
+    def tearDown(self):
+        pass
+
+    def test_simple_one_guy_pays(self):
+        payments = [{'user': 1, 'amount_owed': 100, 'amount_lent': 200},
+                    {'user': 2, 'amount_owed': 100, 'amount_lent': 0}]
+
+        assert get_balances(payments) == [
+            make_transaction(2, 1, 100)
+        ]
+
+    def test_simple_3_guy(self):
+        payments = [{'user': 1, 'amount_owed': 200, 'amount_lent': 100},
+                    {'user': 2, 'amount_owed': 200, 'amount_lent': 200},
+                    {'user': 3, 'amount_owed': 200, 'amount_lent': 300}]
+        for _ in range(3):
+            random.shuffle(payments)
+            assert get_balances(payments) == [
+                make_transaction(3, 1, 100)
+            ]
+
+    def test_alter_3_guy(self):
+        payments = [{'user': 1, 'amount_owed': 200, 'amount_lent': 0},
+                    {'user': 2, 'amount_owed': 200, 'amount_lent': 100},
+                    {'user': 3, 'amount_owed': 200, 'amount_lent': 500}]
+        for _ in range(3):
+            random.shuffle(payments)
+            assert get_balances(payments) == [
+                make_transaction(3, 1, 100)
+            ]
+
+    def test_doc_example(self):
+        payments = [{'user': 1, 'amount_owed': 200, 'amount_lent': 0},
+                    {'user': 2, 'amount_owed': 200, 'amount_lent': 100},
+                    {'user': 3, 'amount_owed': 200, 'amount_lent': 275},
+                    {'user': 3, 'amount_owed': 200, 'amount_lent': 425}]
+
+        for _ in range(3):
+            random.shuffle(payments)
+            assert get_balances(payments) == [
+                make_transaction(1, 4, 200),
+                make_transaction(2, 4, 25),
+                make_transaction(2, 3, 75)
+            ]
+
+
+class GroupBalanceTests(TestCase):
+
+    def setUp(self):
+        self.client = Client()
+        self.a_auth = auth_header(get_a_token(self.client))
+        self.b_auth = auth_header(get_a_token(self.client))
+        self.c_auth = auth_header(get_a_token(self.client))
+        self.cat = self.client.post(f'/api/v1/categories/', {'name': 'Dummy Cat'}, **self.a_auth)
+        x = self.client.post(f'/api/v1/groups/', {'name': 'TestGroup'}, **self.a_auth)
+
+    def test_transitive_addition(self):
+        b_add = self.client.put(f'/api/v1/groups/1/members/', {
+            'add': {'user_ids': [2]}
+        }, **self.a_auth)
+        c_add = self.client.put(f'/api/v1/groups/1/members/', {
+            'add': {'user_ids': [3]}
+        }, **self.b_auth)
+        print(b_add, c_add)
+
+    def test_removal(self):
+        self.test_transitive_addition()
+        c_b_remove = self.client.put(f'/api/v1/groups/1/members/', {
+            'remove': {'user_ids': [2, 3]}
+        }, **self.b_auth)
+        print(c_b_remove)
+
+    def test_balances(self):
+        self.test_transitive_addition()
+        expense = {
+            'group': 1,
+            'category': 1,
+            'description': 'culpa',
+            'total_amount': '300',
+            'users': [
+                {
+                    'amount_lent': '300',
+                    'amount_owed': '100',
+                    'user': 1
+                },
+                {
+                    'amount_lent': '0',
+                    'amount_owed': '100',
+                    'user': 2
+                },
+                {
+                    'amount_lent': '0',
+                    'amount_owed': '100',
+                    'user': 3
+                },
+            ]
+        }
+
+        a_expense = self.client.post(f'/api/v1/expenses/', expense, **self.a_auth)
+        expense = {
+            'group': 1,
+            'category': 1,
+            'description': 'culpa',
+            'total_amount': '300',
+            'users': [
+                {
+                    'amount_lent': '50',
+                    'amount_owed': '100',
+                    'user': 1
+                },
+                {
+                    'amount_lent': '50',
+                    'amount_owed': '100',
+                    'user': 2
+                },
+                {
+                    'amount_lent': '200',
+                    'amount_owed': '100',
+                    'user': 3
+                },
+            ]
+        }
+        b_expense = self.client.post(f'/api/v1/expenses/', expense, **self.b_auth)
+        print(a_expense, b_expense)
+        balances = self.client.get(f'/api/v1/groups/1/balances/', **self.a_auth)
+        print(balances, balances.json())
+
+    def test_balances_2way(self):
+        self.test_transitive_addition()
+        expense = {
+            'group': 1,
+            'category': 1,
+            'description': 'culpa',
+            'total_amount': '300',
+            'users': [
+                {
+                    'amount_lent': '300',
+                    'amount_owed': '100',
+                    'user': 1
+                },
+                {
+                    'amount_lent': '0',
+                    'amount_owed': '100',
+                    'user': 2
+                },
+                {
+                    'amount_lent': '0',
+                    'amount_owed': '100',
+                    'user': 3
+                },
+            ]
+        }
+
+        a_expense = self.client.post(f'/api/v1/expenses/', expense, **self.a_auth)
+        expense = {
+            'group': 1,
+            'category': 1,
+            'description': 'culpa',
+            'total_amount': '300',
+            'users': [
+                {
+                    'amount_lent': '300',
+                    'amount_owed': '100',
+                    'user': 1
+                },
+                {
+                    'amount_lent': '0',
+                    'amount_owed': '100',
+                    'user': 2
+                },
+                {
+                    'amount_lent': '0',
+                    'amount_owed': '100',
+                    'user': 3
+                },
+            ]
+        }
+
+        b_expense = self.client.post(f'/api/v1/expenses/', expense, **self.b_auth)
+        print(a_expense, b_expense)
+        balances = self.client.get(f'/api/v1/groups/1/balances/', **self.a_auth)
+        print(balances, balances.json())
+
+class BalancesTest(TestCase):
+
+    def setUp(self):
+        self.client = Client()
+        self.a_auth = auth_header(get_a_token(self.client))
+        self.b_auth = auth_header(get_a_token(self.client))
+        self.c_auth = auth_header(get_a_token(self.client))
+        self.cat = self.client.post(f'/api/v1/categories/', {'name': 'Dummy Cat'}, **self.a_auth)
+        x = self.client.post(f'/api/v1/groups/', {'name': 'TestGroup'}, **self.a_auth)
+
+    def test_transitive_addition(self):
+        b_add = self.client.put(f'/api/v1/groups/1/members/', {
+            'add': {'user_ids': [2]}
+        }, **self.a_auth)
+        c_add = self.client.put(f'/api/v1/groups/1/members/', {
+            'add': {'user_ids': [3]}
+        }, **self.b_auth)
+        print(b_add, c_add)
+
+    def test_balances_2way(self):
+        self.test_transitive_addition()
+        expense = {
+            'group': 1,
+            'category': 1,
+            'description': 'culpa',
+            'total_amount': '300',
+            'users': [
+                {
+                    'amount_lent': '300',
+                    'amount_owed': '100',
+                    'user': 1
+                },
+                {
+                    'amount_lent': '0',
+                    'amount_owed': '100',
+                    'user': 2
+                },
+                {
+                    'amount_lent': '0',
+                    'amount_owed': '100',
+                    'user': 3
+                },
+            ]
+        }
+
+        a_expense = self.client.post(f'/api/v1/expenses/', expense, **self.a_auth)
+        expense = {
+            'group': 1,
+            'category': 1,
+            'description': 'culpa',
+            'total_amount': '300',
+            'users': [
+                {
+                    'amount_lent': '300',
+                    'amount_owed': '100',
+                    'user': 1
+                },
+                {
+                    'amount_lent': '0',
+                    'amount_owed': '100',
+                    'user': 2
+                },
+                {
+                    'amount_lent': '0',
+                    'amount_owed': '100',
+                    'user': 3
+                },
+            ]
+        }
+        b_expense = self.client.post(f'/api/v1/expenses/', expense, **self.b_auth)
+        print(a_expense, b_expense)
+        asdf = self.client.get("/api/v1/balances/", **self.a_auth)
+
+        print(asdf,asdf.json())
+

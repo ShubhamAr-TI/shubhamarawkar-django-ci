@@ -2,7 +2,7 @@
 from __future__ import unicode_literals
 
 from django.contrib.auth import get_user_model
-from django.db.models import Q
+from django.db.models import Q, Sum
 from django.http import HttpResponse
 from rest_framework import status, filters
 # Create your views here.
@@ -15,7 +15,7 @@ from rest_framework.views import APIView
 
 from restapi.models import Category, Expense, UserExpense, Group
 from restapi.serializers import UserSerializer, CategorySerializer, ExpenseSerializer, UserExpenseSerializer, \
-    GroupSerializer, GroupMembersSerializer
+    GroupSerializer
 
 User = get_user_model()
 
@@ -34,7 +34,21 @@ class Logout(APIView):
 
 class Balances(APIView):
     def get(self, request):
-        print('wassup', request.user)
+        print(request.user)
+        ue = request.user.userexpense_set.all()
+        ux = Expense.objects.filter(userexpense__in=ue).all();
+        ux = UserExpense.objects.all().filter(expense__in=ux)
+        amounts = ux.values('user_id').annotate(amount=Sum('amount_lent') - Sum('amount_owed')).order_by('amount')
+        print(amounts)
+        balances = get_balances(amounts)
+        resp = []
+        for item in balances:
+            if request.user.id == item["from_user"]:
+                resp.append({"user_id": item["to_user"], "amount": int(-1 * item["amount"])})
+
+            if request.user.id == item["to_user"]:
+                resp.append({"user_id": item["from_user"], "amount": int(item["amount"])})
+        return Response(resp,status=status.HTTP_200_OK)
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -55,24 +69,38 @@ class CategoryViewSet(viewsets.ModelViewSet):
 
 
 def validate_query(data):
-    if 'add' not in data and 'remove' not in data:
-        raise ValidationError("add or remove is required field")
-
     for method in ['add', 'remove']:
         if method in data:
-            print(data[method])
             if 'user_ids' not in data[method]:
                 raise ValidationError("user_ids are absent")
             user_ids = data[method]['user_ids']
             if len(user_ids) == 0 or len(user_ids) > len(set(user_ids)):
                 raise ValidationError("user_ids are incorrect")
 
-    if 'add' in data and 'remove' in data:
-        if set(data['add']['user_ids']).intersection(set(data['remove']['user_ids'])):
-            raise ValidationError("add and remove cannot intersect")
 
+def get_balances(amounts):
+    left, right = 0, len(amounts) - 1
+    balances = []
+    while left < right:
+        if amounts[left]['amount'] == 0:
+            left += 1
+        if amounts[right]['amount'] == 0:
+            right -= 1
+        if left >= right:
+            break
 
+        if abs(amounts[left]['amount']) < amounts[right]['amount']:
+            balances.append({"from_user": amounts[left]['user_id'], "to_user": amounts[right]['user_id'],
+                             "amount": abs(amounts[left]['amount'])})
 
+            amounts[left]['amount'] += abs(amounts[left]['amount'])
+            amounts[right]['amount'] -= abs(amounts[left]['amount'])
+        else:
+            balances.append({"from_user": amounts[left]['user_id'], "to_user": amounts[right]['user_id'],
+                             "amount": abs(amounts[right]['amount'])})
+            amounts[left]['amount'] += abs(amounts[right]['amount'])
+            amounts[right]['amount'] -= abs(amounts[right]['amount'])
+    return balances
 
 class GroupViewSet(viewsets.ModelViewSet):
     """
@@ -114,7 +142,6 @@ class GroupViewSet(viewsets.ModelViewSet):
                 if user_id not in members:
                     raise ValidationError("Member not preset in group")
                 members.remove(user_id)
-
         group.members.set(User.objects.filter(id__in=list(members)))
         group.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -122,12 +149,23 @@ class GroupViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'], url_path="expenses")
     def expenses(self, request, pk=None):
         expenses = Expense.objects.filter(group_id=pk).all()
-        serializer = ExpenseSerializer(expenses, many=True)
-        return Response(serializer.data, status=status.HTTP_204_NO_CONTENT)
+        serializer = ExpenseSerializer(instance=expenses, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
-    @action(detail=False, methods=['get'])
+    @action(detail=True, methods=['get'], url_path="balances")
     def balances(self, request, pk=None):
-        pass
+        group = Group.objects.filter(id=pk).first()
+        amounts = group.expense_set.all().values('userexpense__user_id').annotate(
+            amount=Sum('userexpense__amount_lent') - Sum('userexpense__amount_owed')).order_by('amount')
+        amounts = [
+            {'user_id': amount['userexpense__user_id'], 'amount': amount['amount']}
+            for amount in amounts
+        ]
+        print(amounts)
+        balances = get_balances(amounts)
+        for balance in balances:
+            balance['amount'] = "{:.02f}".format(balance['amount'])
+        return Response(balances, status=status.HTTP_200_OK)
 
 
 class ExpenseViewSet(viewsets.ModelViewSet):

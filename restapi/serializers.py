@@ -104,7 +104,7 @@ class ExpenseSerializer(serializers.ModelSerializer):
             assert min([x.get('amount_lent') for x in expense_users]) >= 0
             assert len(set(users)) == len(users)
             if group:
-                if user not in group.members:
+                if user not in group.members.all():
                     raise Http404
                 for user in users:
                     assert group in user.group_set.all()
