@@ -575,17 +575,17 @@ class GroupBalanceTests(TestCase):
             'total_amount': '300',
             'users': [
                 {
-                    'amount_lent': '300',
+                    'amount_lent': '200',
                     'amount_owed': '100',
                     'user': 1
                 },
                 {
-                    'amount_lent': '0',
+                    'amount_lent': '90',
                     'amount_owed': '100',
                     'user': 2
                 },
                 {
-                    'amount_lent': '0',
+                    'amount_lent': '10',
                     'amount_owed': '100',
                     'user': 3
                 },
