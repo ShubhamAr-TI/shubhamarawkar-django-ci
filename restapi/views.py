@@ -78,11 +78,12 @@ class GroupViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['put'], url_path="members")
     def members(self, request, pk=None):
-        print(request.data)
+        print(request.data, request.user,request.user.id)
         group = Group.objects.filter(id=pk).first()
         serializer = GroupMembersSerializer(data=request.data)
         if serializer.is_valid():
-            print(serializer.validated_data)
+            print(serializer)
+            return Response(status=status.HTTP_204_NO_CONTENT)
         return Response(status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=True, methods=['get'], url_path="expenses")
@@ -111,7 +112,8 @@ class ExpenseViewSet(viewsets.ModelViewSet):
         for the currently authenticated user.
         """
         user = self.request.user
-        return Expense.objects.filter(Q(userexpense__in=user.userexpense_set.all()) | Q(group_id__in=user.group_set.all()))
+        return Expense.objects.filter(
+            Q(userexpense__in=user.userexpense_set.all()))
 
     def perform_create(self, serializer):
         kwargs = {

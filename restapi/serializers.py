@@ -54,13 +54,9 @@ class GroupSerializer(serializers.ModelSerializer):
         }
 
 
-class UserIdsSerializer(serializers.Serializer):
-    user_id = serializers.ListField(child=UserSerializer())
-
-
 class GroupMembersSerializer(serializers.Serializer):
-    add = UserIdsSerializer()
-    remove = UserIdsSerializer()
+    add = UserSerializer(many=True)
+    remove = UserSerializer(many=True)
 
 
 class UserExpenseSerializer(serializers.ModelSerializer):
