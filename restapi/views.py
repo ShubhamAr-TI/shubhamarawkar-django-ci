@@ -43,11 +43,12 @@ class Balances(APIView):
         balances = get_balances(amounts)
         resp = []
         for item in balances:
+            if item['amount'] == 0:
+                continue
             if request.user.id == item["from_user"]:
-                resp.append({"user_id": item["to_user"], "amount": int(-1 * item["amount"])})
-
+                resp.append({"user": item["to_user"], "amount": int(-1 * item["amount"])})
             if request.user.id == item["to_user"]:
-                resp.append({"user_id": item["from_user"], "amount": int(item["amount"])})
+                resp.append({"user": item["from_user"], "amount": int(item["amount"])})
         return Response(resp, status=status.HTTP_200_OK)
 
 
@@ -79,7 +80,6 @@ def validate_query(data):
 
 
 def get_balances(amounts):
-    left, right = 0, len(amounts) - 1
     n_amounts = []
     for am in amounts:
         if am['amount'] == 0:
@@ -87,6 +87,7 @@ def get_balances(amounts):
         n_amounts.append(am)
     amounts = n_amounts
     balances = []
+    left, right = 0, len(amounts) - 1
     while left < right:
         if abs(amounts[left]['amount']) < amounts[right]['amount']:
             balances.append({

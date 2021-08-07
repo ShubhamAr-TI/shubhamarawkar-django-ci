@@ -8,6 +8,8 @@ from random import random
 from django.test import Client
 from django.test import TestCase
 
+from restapi.views import get_balances
+
 log = logging.getLogger('TEST')
 
 
@@ -398,13 +400,6 @@ class ExpenseCRUDTestsLevel1(TestCase):
         # print(group_expenses.json())
 
 
-def get_balances():
-    '''
-        dummy balance function
-    '''
-    pass
-
-
 def make_transaction(data):
     return {"from_user": data[0], "to_user": data[1], "amount": data[2]}
 
@@ -418,22 +413,23 @@ class UserTests(TestCase):
         pass
 
     def test_simple_one_guy_pays(self):
-        payments = [{'user': 1, 'amount_owed': 100, 'amount_lent': 200},
-                    {'user': 2, 'amount_owed': 100, 'amount_lent': 0}]
+        payments = [{'user_id': 1, 'amount': -100},
+                    {'user_id': 2, 'amount': 100}]
 
+        print(get_balances(payments))
+        payments = [{'user_id': 1, 'amount': -100},
+                    {'user_id': 2, 'amount': 100}]
         assert get_balances(payments) == [
-            make_transaction(2, 1, 100)
+            make_transaction([1, 2, 100])
         ]
 
     def test_simple_3_guy(self):
-        payments = [{'user': 1, 'amount_owed': 200, 'amount_lent': 100},
-                    {'user': 2, 'amount_owed': 200, 'amount_lent': 200},
-                    {'user': 3, 'amount_owed': 200, 'amount_lent': 300}]
-        for _ in range(3):
-            random.shuffle(payments)
-            assert get_balances(payments) == [
-                make_transaction(3, 1, 100)
-            ]
+        payments = [{'user_id': 1, 'amount': -100},
+                    {'user_id': 2, 'amount': 0},
+                    {'user_id': 3, 'amount': 100}]
+        assert get_balances(payments) == [
+            make_transaction([1, 3, 100])
+        ]
 
     def test_alter_3_guy(self):
         payments = [{'user': 1, 'amount_owed': 200, 'amount_lent': 0},
@@ -597,6 +593,7 @@ class GroupBalanceTests(TestCase):
         balances = self.client.get(f'/api/v1/groups/1/balances/', **self.a_auth)
         print(balances, balances.json())
 
+
 class BalancesTest(TestCase):
 
     def setUp(self):
@@ -625,17 +622,17 @@ class BalancesTest(TestCase):
             'total_amount': '300',
             'users': [
                 {
-                    'amount_lent': '300',
+                    'amount_lent': '50',
                     'amount_owed': '100',
                     'user': 1
                 },
                 {
-                    'amount_lent': '0',
+                    'amount_lent': '75',
                     'amount_owed': '100',
                     'user': 2
                 },
                 {
-                    'amount_lent': '0',
+                    'amount_lent': '175',
                     'amount_owed': '100',
                     'user': 3
                 },
@@ -650,18 +647,18 @@ class BalancesTest(TestCase):
             'total_amount': '300',
             'users': [
                 {
-                    'amount_lent': '300',
-                    'amount_owed': '100',
+                    'amount_lent': '250',
+                    'amount_owed': '0',
                     'user': 1
                 },
                 {
-                    'amount_lent': '0',
+                    'amount_lent': '50',
                     'amount_owed': '100',
                     'user': 2
                 },
                 {
                     'amount_lent': '0',
-                    'amount_owed': '100',
+                    'amount_owed': '200',
                     'user': 3
                 },
             ]
@@ -669,6 +666,15 @@ class BalancesTest(TestCase):
         b_expense = self.client.post(f'/api/v1/expenses/', expense, **self.b_auth)
         print(a_expense, b_expense)
         asdf = self.client.get("/api/v1/balances/", **self.a_auth)
+        print(asdf, asdf.json())
 
-        print(asdf,asdf.json())
+        asdf = self.client.get("/api/v1/balances/", **self.b_auth)
+        print(asdf, asdf.json())
+
+        asdf = self.client.get("/api/v1/balances/", **self.b_auth)
+        print(asdf, asdf.json())
+
+
+
+
 
