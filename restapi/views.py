@@ -13,7 +13,7 @@ from rest_framework.views import APIView
 
 from restapi.models import Category, Expense, UserExpense, Group
 from restapi.serializers import UserSerializer, CategorySerializer, ExpenseSerializer, UserExpenseSerializer, \
-    GroupSerializer
+    GroupSerializer, GroupMembersSerializer
 
 User = get_user_model()
 
@@ -75,11 +75,13 @@ class GroupViewSet(viewsets.ModelViewSet):
         }
         serializer.save(**kwargs)
 
-    @action(detail=False, methods=['put'], url_path="members")
+    @action(detail=True, methods=['put'], url_path="members")
     def members(self, request, pk=None):
-        group = Group.objects.filter(group_id=pk).first()
-
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        group = Group.objects.filter(id=pk).first()
+        serializer = GroupMembersSerializer(data=request.data)
+        if serializer.is_valid():
+            print(serializer.validated_data)
+        return Response(status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=True, methods=['get'], url_path="expenses")
     def expenses(self, request, pk=None):
