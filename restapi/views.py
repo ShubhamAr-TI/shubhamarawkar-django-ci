@@ -115,8 +115,6 @@ class ExpenseViewSet(viewsets.ModelViewSet):
     """
     queryset = Expense.objects.all()
     serializer_class = ExpenseSerializer
-    filter_backends = [filters.SearchFilter]
-    search_fields = ['description']
 
     def get_queryset(self):
         """
@@ -124,9 +122,13 @@ class ExpenseViewSet(viewsets.ModelViewSet):
         for the currently authenticated user.
         """
         user = self.request.user
-        return Expense.objects.filter(
+        expenses = Expense.objects.filter(
             Q(userexpense__in=user.userexpense_set.all())
             | Q(group__in=user.group_set.all()))
+
+        if self.request.query_params.get('q', None) is not None:
+            expenses = expenses.filter(description__icontains=self.request.query_params.get('q', None))
+        return expenses
 
 
 class UserExpenseViewSet(viewsets.ModelViewSet):
