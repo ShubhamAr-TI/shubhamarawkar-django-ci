@@ -23,7 +23,7 @@ class Expense(models.Model):
         Category,
         on_delete=models.CASCADE,
         default=None)
-    total_amount = models.DecimalField(decimal_places=3, max_digits=12)
+    total_amount = models.DecimalField(decimal_places=2, max_digits=10)
     group = models.ForeignKey(
         Group,
         on_delete=models.CASCADE,
