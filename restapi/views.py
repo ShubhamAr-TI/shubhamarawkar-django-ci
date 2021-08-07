@@ -55,11 +55,21 @@ class CategoryViewSet(viewsets.ModelViewSet):
 
 
 def validate_query(data):
-    if 'add' not in data or 'remove' not in data:
-        raise ValidationError("add and remove is required field")
+    if 'add' not in data and 'remove' not in data:
+        raise ValidationError("add or remove is required field")
 
-    if 'user_ids' not in data['add'] or 'user_ids' not in data['remove']:
-        raise ValidationError("add and remove is required field")
+    for method in ['add', 'remove']:
+        if method in data:
+            print(data[method])
+            if 'user_ids' not in data[method]:
+                raise ValidationError("user_ids are absent")
+            user_ids = data[method]['user_ids']
+            if len(user_ids) == 0 or len(user_ids) > len(set(user_ids)):
+                raise ValidationError("user_ids are incorrect")
+
+    if 'add' in data and 'remove' in data:
+        if set(data['add']['user_ids']).intersection(set(data['remove']['user_ids'])):
+            raise ValidationError("add and remove cannot intersect")
 
 
 
@@ -91,12 +101,23 @@ class GroupViewSet(viewsets.ModelViewSet):
     def members(self, request, pk=None):
         print(request.data, request.user, request.user.id)
         group = Group.objects.filter(id=pk).first()
+        members = set([x.id for x in group.members.all()])
+        new_users = []
         validate_query(request.data)
-        serializer = GroupMembersSerializer(data=request.data)
-        if serializer.is_valid():
-            print(serializer)
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        return Response(status=status.HTTP_400_BAD_REQUEST)
+        if 'add' in request.data:
+            for user_id in request.data['add']['user_ids']:
+                if user_id not in members:
+                    members.add(user_id)
+
+        if 'remove' in request.data:
+            for user_id in request.data['remove']['user_ids']:
+                if user_id not in members:
+                    raise ValidationError("Member not preset in group")
+                members.remove(user_id)
+
+        group.members.set(User.objects.filter(id__in=list(members)))
+        group.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=True, methods=['get'], url_path="expenses")
     def expenses(self, request, pk=None):
