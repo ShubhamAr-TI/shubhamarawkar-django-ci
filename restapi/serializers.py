@@ -98,7 +98,6 @@ class ExpenseSerializer(serializers.ModelSerializer):
         total_paid = sum([x.get('amount_lent') for x in expense_users])
         users = [x.get('user') for x in expense_users]
         group = attrs.get('group')
-
         try:
             assert total_owed == total_paid == total_amount
             assert min([x.get('amount_owed') for x in expense_users]) >= 0
