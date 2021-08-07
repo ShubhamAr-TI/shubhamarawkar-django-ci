@@ -72,7 +72,7 @@ class UserExpenseSerializer(serializers.ModelSerializer):
 def additional_validation(validated_data):
     expense_users = validated_data.get('userexpense_set')
     total_owed = total_paid = validated_data.get('total_amount')
-    if total_owed:
+    if total_owed < 0:
         raise ValidationError("Amount should not be Negative")
     uid_set = set()
     for eu in expense_users:
