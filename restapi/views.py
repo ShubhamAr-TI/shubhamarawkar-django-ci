@@ -48,7 +48,7 @@ class Balances(APIView):
 
             if request.user.id == item["to_user"]:
                 resp.append({"user_id": item["from_user"], "amount": int(item["amount"])})
-        return Response(resp,status=status.HTTP_200_OK)
+        return Response(resp, status=status.HTTP_200_OK)
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -80,27 +80,33 @@ def validate_query(data):
 
 def get_balances(amounts):
     left, right = 0, len(amounts) - 1
+    n_amounts = []
+    for am in amounts:
+        if am['amount'] == 0:
+            continue
+        n_amounts.append(am)
+    amounts = n_amounts
     balances = []
     while left < right:
-        if amounts[left]['amount'] == 0:
-            left += 1
-        if amounts[right]['amount'] == 0:
-            right -= 1
-        if left >= right:
-            break
-
         if abs(amounts[left]['amount']) < amounts[right]['amount']:
-            balances.append({"from_user": amounts[left]['user_id'], "to_user": amounts[right]['user_id'],
-                             "amount": abs(amounts[left]['amount'])})
+            balances.append({
+                "from_user": amounts[left]['user_id'],
+                "to_user": amounts[right]['user_id'],
+                "amount": abs(amounts[left]['amount'])})
 
-            amounts[left]['amount'] += abs(amounts[left]['amount'])
+            amounts[left]['amount'] = 0
             amounts[right]['amount'] -= abs(amounts[left]['amount'])
+            left += 1
         else:
-            balances.append({"from_user": amounts[left]['user_id'], "to_user": amounts[right]['user_id'],
-                             "amount": abs(amounts[right]['amount'])})
+            balances.append({
+                "from_user": amounts[left]['user_id'],
+                "to_user": amounts[right]['user_id'],
+                "amount": abs(amounts[right]['amount'])})
             amounts[left]['amount'] += abs(amounts[right]['amount'])
-            amounts[right]['amount'] -= abs(amounts[right]['amount'])
+            amounts[right]['amount'] = 0
+            right -= 1
     return balances
+
 
 class GroupViewSet(viewsets.ModelViewSet):
     """
