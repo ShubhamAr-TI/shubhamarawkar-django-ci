@@ -105,8 +105,6 @@ class ExpenseSerializer(serializers.ModelSerializer):
     users = UserExpenseSerializer(source='userexpense_set', many=True)
 
     def create(self, validated_data):
-        additional_validation(validated_data)
-        group_validation(validated_data)
         validated_data.pop('user')
         expense_users = validated_data.pop('userexpense_set')
         expense = Expense.objects.create(**validated_data)
@@ -115,8 +113,6 @@ class ExpenseSerializer(serializers.ModelSerializer):
         return expense
 
     def update(self, expense, validated_data):
-        additional_validation(validated_data)
-        group_validation(validated_data)
         expense_users = validated_data.pop('userexpense_set')
         expense.category = validated_data.get('category')
         expense.description = validated_data.get('description')
@@ -128,6 +124,30 @@ class ExpenseSerializer(serializers.ModelSerializer):
         expense.save()
         return expense
 
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        user = self.context['request'].user
+        expense_users = attrs.get('userexpense_set')
+        total_amount = attrs.get('total_amount')
+        total_owed = sum([x.get('amount_owed') for x in expense_users])
+        total_paid = sum([x.get('amount_lent') for x in expense_users])
+        users = [x.get('user') for x in expense_users]
+        group = attrs.get('group')
+        try:
+            assert total_owed == total_paid == total_amount
+            assert min([x.get('amount_owed') for x in expense_users]) >= 0
+            assert min([x.get('amount_lent') for x in expense_users]) >= 0
+            assert len(set(users)) == len(users)
+            if group:
+                pass
+            else:
+                assert user in users
+        except AssertionError as ae:
+            raise ae
+            raise ValidationError("Data Validation Failed")
+        return attrs
+
     class Meta(object):
         model = Expense
         fields = '__all__'
+

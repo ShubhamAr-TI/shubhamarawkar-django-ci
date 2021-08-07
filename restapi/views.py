@@ -113,7 +113,8 @@ class ExpenseViewSet(viewsets.ModelViewSet):
         """
         user = self.request.user
         return Expense.objects.filter(
-            Q(userexpense__in=user.userexpense_set.all()))
+            Q(userexpense__in=user.userexpense_set.all())
+            | Q(group__in=user.group_set.all()))
 
     def perform_create(self, serializer):
         kwargs = {
