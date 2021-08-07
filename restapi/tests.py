@@ -234,15 +234,14 @@ class ExpenseCRUDTestsLevel1(TestCase):
 
     def test_single_expense_get(self):
         a_get = self.client.get('/api/v1/expenses/1/', **self.a_auth)
-        print(a_get.json())
+        c_get = self.client.get('/api/v1/expenses/1/', **self.c_auth)
+        assert a_get.status_code == 200 and c_get.status_code == 404
 
     def test_expense_search(self):
         a_get = self.client.get('/api/v1/expenses/?q=cu', **self.a_auth)
         assert a_get.status_code == 200 and a_get.json()['count'] == 1
         a_get = self.client.get('/api/v1/expenses/?q=cud', **self.a_auth)
         assert a_get.status_code == 200 and a_get.json()['count'] == 0
-
-
 
     def test_expense_update(self):
         updated_expense = {

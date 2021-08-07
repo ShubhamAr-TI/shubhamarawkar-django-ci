@@ -77,7 +77,9 @@ class GroupViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['put'], url_path="members")
     def members(self, request, pk=None):
-        pass
+        group = Group.objects.filter(group_id=pk).first()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=True, methods=['get'], url_path="expenses")
     def expenses(self, request, pk=None):

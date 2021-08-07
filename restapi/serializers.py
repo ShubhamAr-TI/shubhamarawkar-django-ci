@@ -1,3 +1,5 @@
+from abc import ABC
+
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -53,6 +55,14 @@ class GroupSerializer(serializers.ModelSerializer):
         }
 
 
+class UserIdsSerializer(serializers.Serializer):
+    user_id = serializers.ListField(child=UserSerializer())
+
+class GroupMembersSerializer(serializers.Serializer):
+    add = UserIdsSerializer()
+    remove = UserIdsSerializer()
+
+
 class UserExpenseSerializer(serializers.ModelSerializer):
     class Meta(object):
         model = UserExpense
@@ -65,11 +75,13 @@ def additional_validation(validated_data):
     uid_set = set()
     for eu in expense_users:
         uid_set.add(eu.get('user'))
+        if eu.get('amount_lent') < 0 or eu.get('amount_owed'):
+            raise ValidationError("Amount should not be Negative")
         total_paid -= eu.get('amount_lent')
         total_owed -= eu.get('amount_owed')
     if len(uid_set) != len(expense_users):
         raise ValidationError("User Expenses must be unique")
-    if abs(total_paid) > 0.005 or abs(total_owed) > 0.005:
+    if abs(total_paid) > 0.00000000000001 or abs(total_owed) > 0.000000000000001:
         raise ValidationError("Expenses are not adding up")
 
 
