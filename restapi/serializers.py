@@ -65,8 +65,6 @@ class UserExpenseSerializer(serializers.ModelSerializer):
         fields = ['user', 'amount_owed', 'amount_lent']
 
 
-
-
 class ExpenseSerializer(serializers.ModelSerializer):
     users = UserExpenseSerializer(source='userexpense_set', many=True)
 
@@ -79,7 +77,6 @@ class ExpenseSerializer(serializers.ModelSerializer):
 
     def update(self, expense, validated_data):
         expense_users = validated_data.pop('userexpense_set')
-
         expense.category = validated_data.get('category')
         expense.description = validated_data.get('description')
         expense.total_amount = validated_data.get('total_amount')
@@ -101,8 +98,6 @@ class ExpenseSerializer(serializers.ModelSerializer):
         total_paid = sum([x.get('amount_lent') for x in expense_users])
         users = [x.get('user') for x in expense_users]
         group = attrs.get('group')
-        if user not in group.members:
-            raise Http404
 
         try:
             assert total_owed == total_paid == total_amount
@@ -110,6 +105,8 @@ class ExpenseSerializer(serializers.ModelSerializer):
             assert min([x.get('amount_lent') for x in expense_users]) >= 0
             assert len(set(users)) == len(users)
             if group:
+                if user not in group.members:
+                    raise Http404
                 for user in users:
                     assert group in user.group_set.all()
             else:
@@ -121,4 +118,3 @@ class ExpenseSerializer(serializers.ModelSerializer):
     class Meta(object):
         model = Expense
         fields = '__all__'
-

@@ -8,6 +8,7 @@ from rest_framework import status, filters
 # Create your views here.
 from rest_framework import viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -53,6 +54,16 @@ class CategoryViewSet(viewsets.ModelViewSet):
     serializer_class = CategorySerializer
 
 
+def validate_query(data):
+    if 'add' not in data or 'remove' not in data:
+        raise ValidationError("add and remove is required field")
+
+    if 'user_ids' not in data['add'] or 'user_ids' not in data['remove']:
+        raise ValidationError("add and remove is required field")
+
+
+
+
 class GroupViewSet(viewsets.ModelViewSet):
     """
     A simple ViewSet for viewing and editing User.
@@ -78,8 +89,9 @@ class GroupViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['put'], url_path="members")
     def members(self, request, pk=None):
-        print(request.data, request.user,request.user.id)
+        print(request.data, request.user, request.user.id)
         group = Group.objects.filter(id=pk).first()
+        validate_query(request.data)
         serializer = GroupMembersSerializer(data=request.data)
         if serializer.is_valid():
             print(serializer)
