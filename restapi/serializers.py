@@ -55,8 +55,8 @@ class GroupSerializer(serializers.ModelSerializer):
 
 
 class GroupMembersSerializer(serializers.Serializer):
-    add = UserSerializer(many=True)
-    remove = UserSerializer(many=True)
+    add = serializers.ListSerializer(child=serializers.IntegerField())
+    remove = serializers.ListSerializer(child=serializers.IntegerField())
 
 
 class UserExpenseSerializer(serializers.ModelSerializer):
@@ -65,47 +65,12 @@ class UserExpenseSerializer(serializers.ModelSerializer):
         fields = ['user', 'amount_owed', 'amount_lent']
 
 
-def additional_validation(validated_data):
-    expense_users = validated_data.get('userexpense_set')
-    total_owed = total_paid = validated_data.get('total_amount')
-    if total_owed < 0:
-        raise ValidationError("Amount should not be Negative")
-    uid_set = set()
-    for eu in expense_users:
-        uid_set.add(eu.get('user'))
-        if eu.get('amount_lent') < 0 or eu.get('amount_owed') < 0:
-            raise ValidationError("Amount should not be Negative")
-        total_paid -= eu.get('amount_lent')
-        total_owed -= eu.get('amount_owed')
-    if len(uid_set) != len(expense_users):
-        raise ValidationError("User Expenses must be unique")
-    if total_paid != 0 or total_owed != 0:
-        raise ValidationError("Expenses are not adding up")
-
-
-def group_validation(validated_data):
-    user = validated_data.get('user')
-    group = validated_data.get('group')
-    expense_users = validated_data.get('userexpense_set')
-    if group:
-        if not user.group_set.all().filter(id=group.id):
-            raise Http404
-        for eu in expense_users:
-            if not eu['user'].group_set.all().filter(id=group.id):
-                raise ValidationError("User not in group")
-    else:
-        contains = False
-        for eu in expense_users:
-            contains = contains or eu['user'] == user
-        if not contains:
-            raise ValidationError("User cannot create expense for others")
 
 
 class ExpenseSerializer(serializers.ModelSerializer):
     users = UserExpenseSerializer(source='userexpense_set', many=True)
 
     def create(self, validated_data):
-        validated_data.pop('user')
         expense_users = validated_data.pop('userexpense_set')
         expense = Expense.objects.create(**validated_data)
         for eu in expense_users:
@@ -114,13 +79,16 @@ class ExpenseSerializer(serializers.ModelSerializer):
 
     def update(self, expense, validated_data):
         expense_users = validated_data.pop('userexpense_set')
+
         expense.category = validated_data.get('category')
         expense.description = validated_data.get('description')
         expense.total_amount = validated_data.get('total_amount')
         expense.group = validated_data.get('group')
-        expense.userexpense_set.all().delete()
-        for eu in expense_users:
-            UserExpense.objects.create(expense=expense, **eu)
+
+        if expense_users:
+            expense.userexpense_set.all().delete()
+            for eu in expense_users:
+                UserExpense.objects.create(expense=expense, **eu)
         expense.save()
         return expense
 
@@ -133,6 +101,9 @@ class ExpenseSerializer(serializers.ModelSerializer):
         total_paid = sum([x.get('amount_lent') for x in expense_users])
         users = [x.get('user') for x in expense_users]
         group = attrs.get('group')
+        if user not in group.members:
+            raise Http404
+
         try:
             assert total_owed == total_paid == total_amount
             assert min([x.get('amount_owed') for x in expense_users]) >= 0
@@ -143,7 +114,7 @@ class ExpenseSerializer(serializers.ModelSerializer):
                     assert group in user.group_set.all()
             else:
                 assert user in users
-        except AssertionError as ae:
+        except AssertionError:
             raise ValidationError("Data Validation Failed")
         return attrs
 
