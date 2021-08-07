@@ -300,6 +300,52 @@ class ExpenseCRUDTestsLevel1(TestCase):
         print(a_put, a_put.json())
         assert a_put.status_code == 400
 
+    def test_expense_unauthorized_create(self):
+        group = self.client.post(f'/api/v1/groups/', {'name': 'Dummy Group'}, **self.a_auth)
+        print("GROUP:",group.json())
+        expense = {
+            'category': 1,
+            'description': 'culpa',
+            'total_amount': '200',
+            'users': [
+                {
+                    'amount_lent': '150',
+                    'amount_owed': '100',
+                    'user': 1
+                },
+                {
+                    'amount_lent': '50',
+                    'amount_owed': '100',
+                    'user': 2
+                }
+            ]
+        }
+        a_put = self.client.put('/api/v1/expenses/1/', expense, **self.a_auth)
+        c_put = self.client.put('/api/v1/expenses/1/', expense, **self.c_auth)
+        assert a_put.status_code == 200 and c_put.status_code == 404
+
+    def test_expense_bad(self):
+        expense = {
+            'category': 1,
+            'description': 'culpa',
+            'total_amount': '200',
+            'users': [
+                {
+                    'amount_lent': '150',
+                    'amount_owed': '100',
+                    'user': 2
+                },
+                {
+                    'amount_lent': '50',
+                    'amount_owed': '100',
+                    'user': 3
+                }
+            ]
+        }
+        a_put = self.client.put('/api/v1/expenses/1/', expense, **self.a_auth)
+        print(a_put)
+        assert a_put.status_code == 400
+
     def test_expense_incorrect_update(self):
         updated_expense = {
             'category': 1,

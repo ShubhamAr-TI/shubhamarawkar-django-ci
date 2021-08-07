@@ -2,6 +2,7 @@
 from __future__ import unicode_literals
 
 from django.contrib.auth import get_user_model
+from django.db.models import Q
 from django.http import HttpResponse
 from rest_framework import status, filters
 # Create your views here.
@@ -77,6 +78,7 @@ class GroupViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['put'], url_path="members")
     def members(self, request, pk=None):
+        print(request.data)
         group = Group.objects.filter(id=pk).first()
         serializer = GroupMembersSerializer(data=request.data)
         if serializer.is_valid():
@@ -109,7 +111,13 @@ class ExpenseViewSet(viewsets.ModelViewSet):
         for the currently authenticated user.
         """
         user = self.request.user
-        return Expense.objects.filter(userexpense__in=user.userexpense_set.all())
+        return Expense.objects.filter(Q(userexpense__in=user.userexpense_set.all()) | Q(group_id__in=user.group_set.all()))
+
+    def perform_create(self, serializer):
+        kwargs = {
+            'user': self.request.user
+        }
+        serializer.save(**kwargs)
 
 
 class UserExpenseViewSet(viewsets.ModelViewSet):

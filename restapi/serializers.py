@@ -1,6 +1,5 @@
-from abc import ABC
-
 from django.contrib.auth import get_user_model
+from django.http import Http404
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -58,6 +57,7 @@ class GroupSerializer(serializers.ModelSerializer):
 class UserIdsSerializer(serializers.Serializer):
     user_id = serializers.ListField(child=UserSerializer())
 
+
 class GroupMembersSerializer(serializers.Serializer):
     add = UserIdsSerializer()
     remove = UserIdsSerializer()
@@ -88,11 +88,31 @@ def additional_validation(validated_data):
         raise ValidationError("Expenses are not adding up")
 
 
+def group_validation(validated_data):
+    user = validated_data.get('user')
+    group = validated_data.get('group')
+    expense_users = validated_data.get('userexpense_set')
+    if group:
+        if not user.group_set.all().filter(id=group.id):
+            raise Http404
+        for eu in expense_users:
+            if not eu['user'].group_set.all().filter(id=group.id):
+                raise ValidationError("User not in group")
+    else:
+        contains = False
+        for eu in expense_users:
+            contains = contains or eu['user'] == user
+        if not contains:
+            raise ValidationError("User cannot create expense for others")
+
+
 class ExpenseSerializer(serializers.ModelSerializer):
     users = UserExpenseSerializer(source='userexpense_set', many=True)
 
     def create(self, validated_data):
         additional_validation(validated_data)
+        group_validation(validated_data)
+        validated_data.pop('user')
         expense_users = validated_data.pop('userexpense_set')
         expense = Expense.objects.create(**validated_data)
         for eu in expense_users:
@@ -101,6 +121,7 @@ class ExpenseSerializer(serializers.ModelSerializer):
 
     def update(self, expense, validated_data):
         additional_validation(validated_data)
+        group_validation(validated_data)
         expense_users = validated_data.pop('userexpense_set')
         expense.category = validated_data.get('category')
         expense.description = validated_data.get('description')
