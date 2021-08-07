@@ -77,10 +77,9 @@ def additional_validation(validated_data):
             raise ValidationError("Amount should not be Negative")
         total_paid -= eu.get('amount_lent')
         total_owed -= eu.get('amount_owed')
-
     if len(uid_set) != len(expense_users):
         raise ValidationError("User Expenses must be unique")
-    if abs(total_paid) > 0.00000000000001 or abs(total_owed) > 0.000000000000001:
+    if total_paid != 0 or total_owed != 0:
         raise ValidationError("Expenses are not adding up")
 
 

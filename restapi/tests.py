@@ -396,3 +396,6 @@ class ExpenseCRUDTestsLevel1(TestCase):
         exp = self.client.post("/api/v1/expenses/", expense, **self.a_auth)
         group_expenses = self.client.get("/api/v1/groups/1/expenses/", **self.a_auth)
         # print(group_expenses.json())
+
+    def test_expense_8(self):
+        expense = {"description":"Spiderman - Far From Home","total_amount":"600","category":"2","users":[{"user":"6","amount_owed":"150","amount_lent":"0"},{"user":"2","amount_owed":"150","amount_lent":"600"}]}
