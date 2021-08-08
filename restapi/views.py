@@ -95,8 +95,8 @@ def get_balances(amounts):
                 "to_user": amounts[right]['user_id'],
                 "amount": abs(amounts[left]['amount'])})
 
-            amounts[left]['amount'] = 0
             amounts[right]['amount'] -= abs(amounts[left]['amount'])
+            amounts[left]['amount'] = 0
             left += 1
         else:
             balances.append({

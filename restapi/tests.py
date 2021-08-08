@@ -432,28 +432,26 @@ class UserTests(TestCase):
         ]
 
     def test_alter_3_guy(self):
-        payments = [{'user': 1, 'amount_owed': 200, 'amount_lent': 0},
-                    {'user': 2, 'amount_owed': 200, 'amount_lent': 100},
-                    {'user': 3, 'amount_owed': 200, 'amount_lent': 500}]
-        for _ in range(3):
-            random.shuffle(payments)
-            assert get_balances(payments) == [
-                make_transaction(3, 1, 100)
-            ]
+        payments = [{'user_id': 1, 'amount':-200},
+                    {'user_id': 2, 'amount':-100},
+                    {'user_id': 3, 'amount':300}]
+        assert get_balances(payments) == [
+            make_transaction([1, 3, 200]),
+            make_transaction([2, 3, 100])
+        ]
 
     def test_doc_example(self):
-        payments = [{'user': 1, 'amount_owed': 200, 'amount_lent': 0},
-                    {'user': 2, 'amount_owed': 200, 'amount_lent': 100},
-                    {'user': 3, 'amount_owed': 200, 'amount_lent': 275},
-                    {'user': 3, 'amount_owed': 200, 'amount_lent': 425}]
-
-        for _ in range(3):
-            random.shuffle(payments)
-            assert get_balances(payments) == [
-                make_transaction(1, 4, 200),
-                make_transaction(2, 4, 25),
-                make_transaction(2, 3, 75)
-            ]
+        payments = [{'user_id': 1, 'amount': -200},
+                    {'user_id': 2, 'amount': -100},
+                    {'user_id': 3, 'amount': 75},
+                    {'user_id': 4, 'amount': 225}]
+        balances = get_balances(payments)
+        print(balances)
+        assert  balances == [
+            make_transaction([1, 4, 200]),
+            make_transaction([2, 4, 25]),
+            make_transaction([2, 3, 75])
+        ]
 
 
 class GroupBalanceTests(TestCase):
