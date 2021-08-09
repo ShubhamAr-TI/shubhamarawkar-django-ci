@@ -103,13 +103,12 @@ class ExpenseSerializer(serializers.ModelSerializer):
             assert min([x.get('amount_lent') for x in expense_users]) >= 0
             assert len(set(users)) == len(users)
             if group:
-                pass
                 # if user not in group.members.all():
                 #     raise Http404
                 
                 # This was causing my test case to fail
-                # for user in users:
-                #     assert group in user.group_set.all()
+                for user in users:
+                    assert group in user.group_set.all()
             else:
                 assert user in users
         except AssertionError:
