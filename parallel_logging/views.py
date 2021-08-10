@@ -10,7 +10,7 @@ from django.core.exceptions import ValidationError
 from datetime import datetime
 # Create your views here.
 
-def validateInput(data):
+def validate_input(data):
     if 'logFiles' not in data:
         raise ValidationError("Log Files is required")
     if 'parallelFileProcessingCount' not in data:
@@ -44,7 +44,7 @@ def serialize_timesplits(data):
         for exception,count in exceptions.items():
             obj["logs"].append({
                 "exception": exception,
-                "count": 1
+                "count": count
             })
         obj["logs"].sort(key=lambda x: x["exception"])
         formatted.append(obj)
@@ -67,7 +67,7 @@ class ProcessLogs(APIView):
     def post(self, request):
         payload = request.data
         try:
-            validateInput(payload)
+            validate_input(payload)
         except ValidationError as ve:
             print(ve)
             return Response({
