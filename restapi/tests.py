@@ -87,11 +87,14 @@ class AuthTests(TestCase):
         pass
 
     def test_bad_response(self):
-        auth_resp = self.client.post('/api/v1/auth/login/', {'username': 'asdf', 'password': 'asdfadf'})
+        auth_resp = self.client.post(
+            '/api/v1/auth/login/', {'username': 'asdf', 'password': 'asdfadf'})
         assert auth_resp.status_code == 400
-        auth_resp = self.client.post('/api/v1/auth/login/', {'username': 'asdf'})
+        auth_resp = self.client.post(
+            '/api/v1/auth/login/', {'username': 'asdf'})
         assert auth_resp.status_code == 400
-        auth_resp = self.client.post('/api/v1/auth/login/', {'password': 'asdf'})
+        auth_resp = self.client.post(
+            '/api/v1/auth/login/', {'password': 'asdf'})
         assert auth_resp.status_code == 400
 
     def test_token_generation(self):
@@ -125,7 +128,8 @@ class GroupCRUDTestsLevel1(TestCase):
     def test_group_get(self):
         user_headers = auth_header(get_a_token(self.client))
         otherguy_headers = auth_header(get_a_token(self.client))
-        x = self.client.post(f'/api/v1/groups/', {'name': 'TestGroup'}, **user_headers)
+        x = self.client.post(f'/api/v1/groups/',
+                             {'name': 'TestGroup'}, **user_headers)
         assert x.status_code == 201
         group = x.json()
         print('GROUP CREATED', group)
@@ -133,13 +137,16 @@ class GroupCRUDTestsLevel1(TestCase):
         assert 'members' in group
 
         x = self.client.get(f"/api/v1/groups/{group['id']}/", **user_headers)
-        y = self.client.get(f"/api/v1/groups/{group['id']}/", **otherguy_headers)
+        y = self.client.get(
+            f"/api/v1/groups/{group['id']}/",
+            **otherguy_headers)
         assert x.status_code == 200 and y.status_code == 404
 
     def test_group_update(self):
         user_headers = auth_header(get_a_token(self.client))
         otherguy_headers = auth_header(get_a_token(self.client))
-        x = self.client.post(f'/api/v1/groups/', {'name': 'TestGroup'}, **user_headers)
+        x = self.client.post(f'/api/v1/groups/',
+                             {'name': 'TestGroup'}, **user_headers)
         assert x.status_code == 201
         group = x.json()
         print('GROUP CREATED', group)
@@ -147,25 +154,32 @@ class GroupCRUDTestsLevel1(TestCase):
         assert 'members' in group
         group_id = x.json()['id']
         new_name = f'{int(random() * 1e6)}'
-        x = self.client.put(f'/api/v1/groups/{group_id}/', {'name': new_name}, **user_headers)
+        x = self.client.put(
+            f'/api/v1/groups/{group_id}/', {'name': new_name}, **user_headers)
         print(x.json())
         # assert x.status_code == 201
         assert x.json()['name'] == new_name
-        x = self.client.put(f'/api/v1/groups/{group_id}/', {'name': new_name}, **otherguy_headers)
+        x = self.client.put(
+            f'/api/v1/groups/{group_id}/', {'name': new_name}, **otherguy_headers)
         assert x.status_code == 401 or x.status_code == 404  # FIXME is this correct
 
     def test_group_delete(self):
         user_headers = auth_header(get_a_token(self.client))
         otherguy_headers = auth_header(get_a_token(self.client))
-        x = self.client.post(f'/api/v1/groups/', {'name': 'TestGroup'}, **user_headers)
+        x = self.client.post(f'/api/v1/groups/',
+                             {'name': 'TestGroup'}, **user_headers)
         assert x.status_code == 201
         group = x.json()
         print('GROUP CREATED', group)
         assert 'id' in group
         assert 'members' in group
 
-        y = self.client.delete(f"/api/v1/groups/{group['id']}/", **otherguy_headers)
-        x = self.client.delete(f"/api/v1/groups/{group['id']}/", **user_headers)
+        y = self.client.delete(
+            f"/api/v1/groups/{group['id']}/",
+            **otherguy_headers)
+        x = self.client.delete(
+            f"/api/v1/groups/{group['id']}/",
+            **user_headers)
         assert x.status_code == 204 and y.status_code == 404
 
 
@@ -176,7 +190,8 @@ class ExpenseCRUDTestsLevel1(TestCase):
         self.a_auth = auth_header(get_a_token(self.client))
         self.b_auth = auth_header(get_a_token(self.client))
         self.c_auth = auth_header(get_a_token(self.client))
-        self.cat = self.client.post(f'/api/v1/categories/', {'name': 'Dummy Cat'}, **self.a_auth)
+        self.cat = self.client.post(
+            f'/api/v1/categories/', {'name': 'Dummy Cat'}, **self.a_auth)
 
         self.expense = self.client.post(f'/api/v1/expenses/',
                                         {
@@ -230,8 +245,8 @@ class ExpenseCRUDTestsLevel1(TestCase):
         c_get = self.client.get('/api/v1/expenses/', **self.c_auth)
         print(a_get, b_get, c_get)
         assert a_get.json()['count'] == 1 \
-               and b_get.json()['count'] == 1 \
-               and c_get.json()['count'] == 0
+            and b_get.json()['count'] == 1 \
+            and c_get.json()['count'] == 0
         assert a_get.json() == b_get.json()
 
     def test_single_expense_get(self):
@@ -264,9 +279,18 @@ class ExpenseCRUDTestsLevel1(TestCase):
             ]
         }
 
-        c_put = self.client.put('/api/v1/expenses/1/', updated_expense, **self.c_auth)
-        b_put = self.client.put('/api/v1/expenses/1/', updated_expense, **self.b_auth)
-        a_put = self.client.put('/api/v1/expenses/1/', updated_expense, **self.a_auth)
+        c_put = self.client.put(
+            '/api/v1/expenses/1/',
+            updated_expense,
+            **self.c_auth)
+        b_put = self.client.put(
+            '/api/v1/expenses/1/',
+            updated_expense,
+            **self.b_auth)
+        a_put = self.client.put(
+            '/api/v1/expenses/1/',
+            updated_expense,
+            **self.a_auth)
 
         updated_reponse = a_put.json()
         print(updated_reponse)
@@ -298,12 +322,16 @@ class ExpenseCRUDTestsLevel1(TestCase):
                 }
             ]
         }
-        a_put = self.client.put('/api/v1/expenses/1/', updated_expense, **self.a_auth)
+        a_put = self.client.put(
+            '/api/v1/expenses/1/',
+            updated_expense,
+            **self.a_auth)
         print(a_put, a_put.json())
         assert a_put.status_code == 400
 
     def test_expense_unauthorized_create(self):
-        group = self.client.post(f'/api/v1/groups/', {'name': 'Dummy Group'}, **self.a_auth)
+        group = self.client.post(
+            f'/api/v1/groups/', {'name': 'Dummy Group'}, **self.a_auth)
         print("GROUP:", group.json())
         expense = {
             'category': 1,
@@ -366,12 +394,16 @@ class ExpenseCRUDTestsLevel1(TestCase):
                 }
             ]
         }
-        a_put = self.client.put('/api/v1/expenses/1/', updated_expense, **self.a_auth)
+        a_put = self.client.put(
+            '/api/v1/expenses/1/',
+            updated_expense,
+            **self.a_auth)
         print(a_put, a_put.json())
         assert a_put.status_code == 400
 
     def test_group_expenses(self):
-        x = self.client.post(f'/api/v1/groups/', {'name': 'TestGroup'}, **self.a_auth)
+        x = self.client.post(f'/api/v1/groups/',
+                             {'name': 'TestGroup'}, **self.a_auth)
         assert x.status_code == 201
         group = x.json()
         print('GROUP CREATED', group)
@@ -396,7 +428,8 @@ class ExpenseCRUDTestsLevel1(TestCase):
             ]
         }
         exp = self.client.post("/api/v1/expenses/", expense, **self.a_auth)
-        group_expenses = self.client.get("/api/v1/groups/1/expenses/", **self.a_auth)
+        group_expenses = self.client.get(
+            "/api/v1/groups/1/expenses/", **self.a_auth)
         # print(group_expenses.json())
 
 
@@ -432,9 +465,9 @@ class UserTests(TestCase):
         ]
 
     def test_alter_3_guy(self):
-        payments = [{'user_id': 1, 'amount':-200},
-                    {'user_id': 2, 'amount':-100},
-                    {'user_id': 3, 'amount':300}]
+        payments = [{'user_id': 1, 'amount': -200},
+                    {'user_id': 2, 'amount': -100},
+                    {'user_id': 3, 'amount': 300}]
         assert get_balances(payments) == [
             make_transaction([1, 3, 200]),
             make_transaction([2, 3, 100])
@@ -447,7 +480,7 @@ class UserTests(TestCase):
                     {'user_id': 4, 'amount': 225}]
         balances = get_balances(payments)
         print(balances)
-        assert  balances == [
+        assert balances == [
             make_transaction([1, 4, 200]),
             make_transaction([2, 4, 25]),
             make_transaction([2, 3, 75])
@@ -461,8 +494,10 @@ class GroupBalanceTests(TestCase):
         self.a_auth = auth_header(get_a_token(self.client))
         self.b_auth = auth_header(get_a_token(self.client))
         self.c_auth = auth_header(get_a_token(self.client))
-        self.cat = self.client.post(f'/api/v1/categories/', {'name': 'Dummy Cat'}, **self.a_auth)
-        x = self.client.post(f'/api/v1/groups/', {'name': 'TestGroup'}, **self.a_auth)
+        self.cat = self.client.post(
+            f'/api/v1/categories/', {'name': 'Dummy Cat'}, **self.a_auth)
+        x = self.client.post(f'/api/v1/groups/',
+                             {'name': 'TestGroup'}, **self.a_auth)
 
     def test_transitive_addition(self):
         b_add = self.client.put(f'/api/v1/groups/1/members/', {
@@ -506,7 +541,8 @@ class GroupBalanceTests(TestCase):
             ]
         }
 
-        a_expense = self.client.post(f'/api/v1/expenses/', expense, **self.a_auth)
+        a_expense = self.client.post(
+            f'/api/v1/expenses/', expense, **self.a_auth)
         expense = {
             'group': 1,
             'category': 1,
@@ -530,9 +566,11 @@ class GroupBalanceTests(TestCase):
                 },
             ]
         }
-        b_expense = self.client.post(f'/api/v1/expenses/', expense, **self.b_auth)
+        b_expense = self.client.post(
+            f'/api/v1/expenses/', expense, **self.b_auth)
         print(a_expense, b_expense)
-        balances = self.client.get(f'/api/v1/groups/1/balances/', **self.a_auth)
+        balances = self.client.get(
+            f'/api/v1/groups/1/balances/', **self.a_auth)
         print(balances, balances.json())
 
     def test_balances_2way(self):
@@ -561,7 +599,8 @@ class GroupBalanceTests(TestCase):
             ]
         }
 
-        a_expense = self.client.post(f'/api/v1/expenses/', expense, **self.a_auth)
+        a_expense = self.client.post(
+            f'/api/v1/expenses/', expense, **self.a_auth)
         expense = {
             'group': 1,
             'category': 1,
@@ -586,9 +625,11 @@ class GroupBalanceTests(TestCase):
             ]
         }
 
-        b_expense = self.client.post(f'/api/v1/expenses/', expense, **self.b_auth)
+        b_expense = self.client.post(
+            f'/api/v1/expenses/', expense, **self.b_auth)
         print(a_expense, b_expense)
-        balances = self.client.get(f'/api/v1/groups/1/balances/', **self.a_auth)
+        balances = self.client.get(
+            f'/api/v1/groups/1/balances/', **self.a_auth)
         print(balances, balances.json())
 
 
@@ -599,8 +640,10 @@ class BalancesTest(TestCase):
         self.a_auth = auth_header(get_a_token(self.client))
         self.b_auth = auth_header(get_a_token(self.client))
         self.c_auth = auth_header(get_a_token(self.client))
-        self.cat = self.client.post(f'/api/v1/categories/', {'name': 'Dummy Cat'}, **self.a_auth)
-        x = self.client.post(f'/api/v1/groups/', {'name': 'TestGroup'}, **self.a_auth)
+        self.cat = self.client.post(
+            f'/api/v1/categories/', {'name': 'Dummy Cat'}, **self.a_auth)
+        x = self.client.post(f'/api/v1/groups/',
+                             {'name': 'TestGroup'}, **self.a_auth)
 
     def test_transitive_addition(self):
         b_add = self.client.put(f'/api/v1/groups/1/members/', {
@@ -637,7 +680,8 @@ class BalancesTest(TestCase):
             ]
         }
 
-        a_expense = self.client.post(f'/api/v1/expenses/', expense, **self.a_auth)
+        a_expense = self.client.post(
+            f'/api/v1/expenses/', expense, **self.a_auth)
         expense = {
             'group': 1,
             'category': 1,
@@ -661,7 +705,8 @@ class BalancesTest(TestCase):
                 },
             ]
         }
-        b_expense = self.client.post(f'/api/v1/expenses/', expense, **self.b_auth)
+        b_expense = self.client.post(
+            f'/api/v1/expenses/', expense, **self.b_auth)
         print(a_expense, b_expense)
         asdf = self.client.get("/api/v1/balances/", **self.a_auth)
         print(asdf, asdf.json())
@@ -671,8 +716,3 @@ class BalancesTest(TestCase):
 
         asdf = self.client.get("/api/v1/balances/", **self.b_auth)
         print(asdf, asdf.json())
-
-
-
-
-

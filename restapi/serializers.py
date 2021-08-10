@@ -105,7 +105,7 @@ class ExpenseSerializer(serializers.ModelSerializer):
             if group:
                 # if user not in group.members.all():
                 #     raise Http404
-                
+
                 # This was causing my test case to fail
                 for user in users:
                     assert group in user.group_set.all()

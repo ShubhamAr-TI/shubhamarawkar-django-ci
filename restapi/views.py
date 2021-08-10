@@ -36,9 +36,11 @@ class Balances(APIView):
     def get(self, request):
         print(request.user)
         ue = request.user.userexpense_set.all()
-        ux = Expense.objects.filter(userexpense__in=ue).all();
+        ux = Expense.objects.filter(userexpense__in=ue).all()
         ux = UserExpense.objects.all().filter(expense__in=ux)
-        amounts = ux.values('user_id').annotate(amount=Sum('amount_lent') - Sum('amount_owed')).order_by('amount')
+        amounts = ux.values('user_id').annotate(
+            amount=Sum('amount_lent') -
+            Sum('amount_owed')).order_by('amount')
         print(amounts)
         balances = get_balances(amounts)
         resp = []
@@ -46,9 +48,11 @@ class Balances(APIView):
             if item['amount'] == 0:
                 continue
             if request.user.id == item["from_user"]:
-                resp.append({"user": item["to_user"], "amount": int(-1 * item["amount"])})
+                resp.append({"user": item["to_user"],
+                            "amount": int(-1 * item["amount"])})
             if request.user.id == item["to_user"]:
-                resp.append({"user": item["from_user"], "amount": int(item["amount"])})
+                resp.append(
+                    {"user": item["from_user"], "amount": int(item["amount"])})
         return Response(resp, status=status.HTTP_200_OK)
 
 
@@ -137,7 +141,6 @@ class GroupViewSet(viewsets.ModelViewSet):
         print(request.data, request.user, request.user.id)
         group = Group.objects.filter(id=pk).first()
         members = set([x.id for x in group.members.all()])
-        new_users = []
         validate_query(request.data)
         if 'add' in request.data:
             for user_id in request.data['add']['user_ids']:
@@ -163,7 +166,8 @@ class GroupViewSet(viewsets.ModelViewSet):
     def balances(self, request, pk=None):
         group = Group.objects.filter(id=pk).first()
         amounts = group.expense_set.all().values('userexpense__user_id').annotate(
-            amount=Sum('userexpense__amount_lent') - Sum('userexpense__amount_owed')).order_by('amount')
+            amount=Sum('userexpense__amount_lent') -
+            Sum('userexpense__amount_owed')).order_by('amount')
         amounts = [
             {'user_id': amount['userexpense__user_id'], 'amount': amount['amount']}
             for amount in amounts
@@ -193,7 +197,9 @@ class ExpenseViewSet(viewsets.ModelViewSet):
             | Q(group__in=user.group_set.all()))
 
         if self.request.query_params.get('q', None) is not None:
-            expenses = expenses.filter(description__icontains=self.request.query_params.get('q', None))
+            expenses = expenses.filter(
+                description__icontains=self.request.query_params.get(
+                    'q', None))
         return expenses
 
 
