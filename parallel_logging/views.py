@@ -8,7 +8,20 @@ import concurrent.futures
 import urllib.request
 from django.core.exceptions import ValidationError
 from datetime import datetime
+import json
 # Create your views here.
+
+import logging
+import logging.handlers
+logger = logging.getLogger('mylogger')
+http_handler = logging.handlers.HTTPHandler(
+    '8080-indigo-tick-3i31djvd.ws.trilogy.devspaces.com',
+    '/api/v1/remote_logging/',
+    secure=True,
+    method='POST',
+)
+logger.addHandler(http_handler)
+
 
 def validate_input(data):
     if 'logFiles' not in data:
@@ -21,25 +34,19 @@ def validate_input(data):
 def load_url(url, timeout):
     timewise_split = defaultdict(lambda: defaultdict(lambda: 0))
     with urllib.request.urlopen(url, timeout=timeout) as conn:
-        lines = []
         for line in conn:
             if line[-2:] == b'\r\n':
                 line = line[:-2]
             timestamp,exception = int(line[13:26].decode('utf-8')),line[27:].decode('utf-8')
-            quartet_time = datetime.fromtimestamp(timestamp//(1000*60+15)*60*15)
-            timewise_split[(quartet_time.hour,quartet_time.minute)][exception] += 1
+            dt = datetime.fromtimestamp(timestamp//(1000*60*15)*60*15)
+            timewise_split[dt][exception] += 1
     return timewise_split
 
 def serialize_timesplits(data):
     formatted = []
-    for (hr,mn),exceptions in data.items():
+    for dt,exceptions in data.items():
         obj = {}
-        nhr = hr
-        if mn == 45:
-            nhr = (mn + 1)%24
-        nmn = mn+15 if mn < 45 else 00
-        obj["ts"] = (hr,mn)
-        obj["timestamp"] = "{:02d}:{:02d}-{:02d}:{:02d}".format(hr,mn,nhr,nmn)
+        obj["ts"] = dt
         obj["logs"] = []
         for exception,count in exceptions.items():
             obj["logs"].append({
@@ -49,15 +56,15 @@ def serialize_timesplits(data):
         obj["logs"].sort(key=lambda x: x["exception"])
         formatted.append(obj)
     formatted.sort(key=lambda x: x["ts"])
-    pre = []
-    post = []
     for x in formatted:
-        if x['ts'][0] < 9:
-            pre.append(x)
-        else:
-            post.append(x)
+        dt = x['ts']
+        (hr,mn) = dt.hour,dt.minute
+        nhr = hr
+        if mn == 45:
+            nhr = (mn + 1)%24
+        nmn = mn+15 if mn < 45 else 00
+        x["timestamp"] = "{:02d}:{:02d}-{:02d}:{:02d}".format(hr,mn,nhr,nmn)
         del x['ts']
-    formatted = post + pre
             
     return {"response":formatted}
 
@@ -66,6 +73,7 @@ class ProcessLogs(APIView):
 
     def post(self, request):
         payload = request.data
+        logger.error(json.dumps(request.data))
         try:
             validate_input(payload)
         except ValidationError as ve:
@@ -88,3 +96,10 @@ class ProcessLogs(APIView):
                 except Exception as exc:
                     print('%r generated an exception: %s' % (url, exc))
         return Response(serialize_timesplits(timewise_split),status=status.HTTP_200_OK)
+
+class RemoteLogs(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        print("this stuff",request.data)
+        return Response(status=status.HTTP_204_NO_CONTENT)
