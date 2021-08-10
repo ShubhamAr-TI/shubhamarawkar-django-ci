@@ -20,6 +20,7 @@ from restapi.views import *
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
+    re_path(r'^api/v1/', include('parallel_logging.urls')),
     re_path(r'^api/v1/', include('restapi.urls')),
 
 ]
