@@ -59,11 +59,11 @@ def serialize_timesplits(data):
     for x in formatted:
         dt = x['ts']
         (hr,mn) = dt.hour,dt.minute
-        nhr = hr
-        if mn == 45:
-            nhr = (mn + 1)%24
-        nmn = mn+15 if mn < 45 else 00
-        x["timestamp"] = "{:02d}:{:02d}-{:02d}:{:02d}".format(hr,mn,nhr,nmn)
+        nhm = mn  + 15
+        nhr = (hr + nhm//60)%24
+        nhm = nhm % 60
+        
+        x["timestamp"] = "{:02d}:{:02d}-{:02d}:{:02d}".format(hr,mn,nhr,nhm)
         del x['ts']
             
     return {"response":formatted}
@@ -73,7 +73,7 @@ class ProcessLogs(APIView):
 
     def post(self, request):
         payload = request.data
-        logger.error(json.dumps(request.data))
+        # logger.error(json.dumps(request.data))
         try:
             validate_input(payload)
         except ValidationError as ve:
