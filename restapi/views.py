@@ -21,7 +21,10 @@ import boto3
 import urllib
 import os
 User = get_user_model()
+import logging
 
+# Get an instance of a logger
+logger = logging.getLogger(__name__)
 
 # from django.shortcuts import render
 
@@ -207,6 +210,7 @@ class ExpenseViewSet(viewsets.ModelViewSet):
     
     @action(methods=["post"], detail=False, url_path="bulk")
     def bulk(self, request):
+        logger.error(request.data)
         if 'url' not in request.data:
             raise ValidationError("URL is a necessary field")
         if request.accepted_media_type != "application/json":

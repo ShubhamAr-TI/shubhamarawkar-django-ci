@@ -7,5 +7,6 @@ import requests
 
 @shared_task(name="bulk_expense_insert")
 def bulk_expenses(data):
-    print("bulk_expenses",data)
+    with urllib.request.urlopen(data):
+        pass
     return data
