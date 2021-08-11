@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
+import json
+
 from django.contrib.auth import get_user_model
 from django.db.models import Q, Sum
 from django.http import HttpResponse
@@ -210,7 +212,7 @@ class ExpenseViewSet(viewsets.ModelViewSet):
     
     @action(methods=["post"], detail=False, url_path="bulk")
     def bulk(self, request):
-        logger.error(request.data)
+        logger.error(json.dumps(request.data))
         if 'url' not in request.data:
             raise ValidationError("URL is a necessary field")
         if request.accepted_media_type != "application/json":
