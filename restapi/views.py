@@ -24,11 +24,21 @@ import urllib
 import os
 User = get_user_model()
 import logging
-
-# Get an instance of a logger
-logger = logging.getLogger(__name__)
-
-# from django.shortcuts import render
+import socket
+from logging.handlers import SysLogHandler
+class ContextFilter(logging.Filter):
+    hostname = socket.gethostname()
+    def filter(self, record):
+        record.hostname = ContextFilter.hostname
+        return True
+syslog = SysLogHandler(address=('logs3.papertrailapp.com',42305))
+syslog.addFilter(ContextFilter())
+format = '%(asctime)s %(hostname)s YOUR_APP: %(message)s'
+formatter = logging.Formatter(format, datefmt='%b %d %H:%M:%S')
+syslog.setFormatter(formatter)
+logger = logging.getLogger()
+logger.addHandler(syslog)
+logger.setLevel(logging.INFO)
 
 def index(request):
     return HttpResponse('Hello, world. You\'re at Rest.' + request.user)
