@@ -16,7 +16,10 @@ from rest_framework.views import APIView
 from restapi.models import Category, Expense, UserExpense, Group
 from restapi.serializers import UserSerializer, CategorySerializer, ExpenseSerializer, UserExpenseSerializer, \
     GroupSerializer
-
+from restapi.tasks import bulk_expenses
+import boto3
+import urllib
+import os
 User = get_user_model()
 
 
@@ -201,6 +204,25 @@ class ExpenseViewSet(viewsets.ModelViewSet):
                 description__icontains=self.request.query_params.get(
                     'q', None))
         return expenses
+    
+    @action(methods=["post"], detail=False, url_path="bulk")
+    def bulk(self, request):
+        if 'url' not in request.data:
+            raise ValidationError("URL is a necessary field")
+        if request.accepted_media_type != "application/json":
+            raise ValidationError("Only application/json is supported")
+        # bulk_expenses.delay(request.data['url'])
+        s3_csv_url = request.data['url']
+        print(bulk_expenses.delay(s3_csv_url))
+        s3 = boto3.client('s3')
+        with urllib.request.urlopen(s3_csv_url) as conn:
+            s3.upload_fileobj(conn, os.environ.get('S3_BUCKET_NAME'), "transactions.csv")
+            presigned_url = s3.generate_presigned_url(
+                ClientMethod='get_object',
+                Params={'Bucket': os.environ.get('S3_BUCKET_NAME'), 'Key': 'transactions.csv'},
+            )
+            return Response({"url": presigned_url}, status=status.HTTP_200_OK)
+        return Exception("Unexpected State")
 
 
 class UserExpenseViewSet(viewsets.ModelViewSet):

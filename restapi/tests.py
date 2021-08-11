@@ -9,7 +9,7 @@ from django.test import Client
 from django.test import TestCase
 
 from restapi.views import get_balances
-
+import redis
 log = logging.getLogger('TEST')
 
 
@@ -716,3 +716,21 @@ class BalancesTest(TestCase):
 
         asdf = self.client.get("/api/v1/balances/", **self.b_auth)
         print(asdf, asdf.json())
+
+def test_redis():
+    r = redis.Redis(host='localhost', port=6379, db=0)
+    r.set("foo","bar")
+    r.get("bar")
+
+class BulkExpenses(BalancesTest):
+    def setUp(self):
+        super().setUp()
+        self.d_auth = auth_header(get_a_token(self.client))
+        self.e_auth = auth_header(get_a_token(self.client))
+
+    def test_bulk_add(self):
+        test_redis()
+        resp = self.client.post("/api/v1/expenses/bulk/", {
+            "url": "https://codejudge-question-artifacts.s3.ap-south-1.amazonaws.com/splitwise/transactions.csv"
+        }, **self.a_auth)
+        print(resp.json())
