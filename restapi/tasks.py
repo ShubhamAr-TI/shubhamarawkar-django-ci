@@ -2,7 +2,7 @@ from celery import shared_task
 import os
 import boto3
 from subprocess import call
-import urllibg
+import urllib
 
 @shared_task(name="bulk_expense_insert")
 def bulk_expenses(data):
