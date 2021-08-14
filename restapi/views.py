@@ -245,24 +245,24 @@ class ExpenseViewSet(viewsets.ModelViewSet):
         except Exception as e:
             raise ValidationError("Bad URL")
 
-        s3 = boto3.client('s3')
+        # s3 = boto3.client('s3')
         with urllib.request.urlopen(s3_csv_url) as f:
             data = f.read()
             b = io.BytesIO(data)
             c = io.BytesIO(data)
-            s3.upload_fileobj(
-                b,
-                os.environ.get("S3_BUCKET_NAME"),
-                "transactions.csv")
+            # s3.upload_fileobj(
+            #     b,
+            #     os.environ.get("S3_BUCKET_NAME"),
+            #     "transactions.csv")
             x = pd.read_csv(c)
             bulk_expenses.delay(x.to_dict('records'))
-
-        presigned_url = s3.generate_presigned_url(
-            ClientMethod='get_object',
-            Params={
-                'Bucket': os.environ.get('S3_BUCKET_NAME'),
-                'Key': 'transactions.csv'},
-        )
+        presigned_url = "asdf"
+        # presigned_url = s3.generate_presigned_url(
+        #     ClientMethod='get_object',
+        #     Params={
+        #         'Bucket': os.environ.get('S3_BUCKET_NAME'),
+        #         'Key': 'transactions.csv'},
+        # )
         return Response({"url": presigned_url},
                         status=status.HTTP_202_ACCEPTED)
 

@@ -33,12 +33,11 @@ def bulk_expenses(data):
         grp = None
         if 'group_id' in expense:
             grp = expense['group_id']
-        exp = models.Expense(
+        exp = models.Expense.objects.create(
             description=expense['description'],
             category_id=expense['category_id'],
             total_amount=expense['amount'],
             group_id=grp)
-        exp.save()
         owed = defaultdict(lambda: 0)
         lent = defaultdict(lambda: 0)
         for key in expense.keys():
@@ -57,7 +56,7 @@ def bulk_expenses(data):
                      ] = expense[key] if expense[key] else 0
         for user in set(list(owed.keys()) + list(lent.keys())):
             if lent[user] or owed[user]:
-                ue = models.UserExpense(
+                ue = models.UserExpense.objects.create(
                     user_id=user,
                     amount_lent=lent[user],
                     amount_owed=owed[user],
@@ -65,4 +64,3 @@ def bulk_expenses(data):
                 )
                 ue.save()
                 print(ue)
-        print(exp)
