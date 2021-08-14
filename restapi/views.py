@@ -251,7 +251,7 @@ class ExpenseViewSet(viewsets.ModelViewSet):
             ClientMethod='get_object',
             Params={'Bucket': os.environ.get('S3_BUCKET_NAME'), 'Key': 'transactions.csv'},
         )
-        return Response({"url": presigned_url}, status=status.HTTP_200_OK)
+        return Response({"url": presigned_url}, status=status.HTTP_202_ACCEPTED)
 
 
 class UserExpenseViewSet(viewsets.ModelViewSet):
