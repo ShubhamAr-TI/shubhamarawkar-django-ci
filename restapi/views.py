@@ -245,7 +245,7 @@ class ExpenseViewSet(viewsets.ModelViewSet):
         except Exception as e:
             raise ValidationError("Bad URL")
 
-        # s3 = boto3.client('s3')
+        s3 = boto3.client('s3')
         with urllib.request.urlopen(s3_csv_url) as f:
             data = f.read()
             b = io.BytesIO(data)
