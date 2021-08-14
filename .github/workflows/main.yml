@@ -10,7 +10,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
       - name: Hello world action step
-        uses: ./django-action
+        uses: ./.github/django-action
         id: hello
         with:
           app-tagname: ${{ secrets.app-tag-name }}
