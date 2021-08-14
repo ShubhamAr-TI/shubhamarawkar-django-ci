@@ -4,13 +4,11 @@ inputs:
   app-tagname:  # id of input
     description: 'tag of the app container'
     required: true
-  celery-tagname: # id of input
-    description: 'tag of the celery container'
 outputs:
   time: # id of output
     description: 'The time we greeted you'
 runs:
   using: 'docker'
-  image: '../../django.Dockerfile'
+  image: 'django.Dockerfile'
   args:
     - ${{ inputs.app-tagname }}
