@@ -250,19 +250,19 @@ class ExpenseViewSet(viewsets.ModelViewSet):
             data = f.read()
             b = io.BytesIO(data)
             c = io.BytesIO(data)
-            # s3.upload_fileobj(
-            #     b,
-            #     os.environ.get("S3_BUCKET_NAME"),
-            #     "transactions.csv")
+            s3.upload_fileobj(
+                b,
+                os.environ.get("S3_BUCKET_NAME"),
+                "transactions.csv")
             x = pd.read_csv(c)
             bulk_expenses.delay(x.fillna(0).to_dict('records'))
         presigned_url = "asdf"
-        # presigned_url = s3.generate_presigned_url(
-        #     ClientMethod='get_object',
-        #     Params={
-        #         'Bucket': os.environ.get('S3_BUCKET_NAME'),
-        #         'Key': 'transactions.csv'},
-        # )
+        presigned_url = s3.generate_presigned_url(
+            ClientMethod='get_object',
+            Params={
+                'Bucket': os.environ.get('S3_BUCKET_NAME'),
+                'Key': 'transactions.csv'},
+        )
         return Response({"url": presigned_url},
                         status=status.HTTP_202_ACCEPTED)
 
