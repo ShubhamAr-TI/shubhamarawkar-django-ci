@@ -734,3 +734,8 @@ class BulkExpenses(BalancesTest):
             "url": "https://codejudge-question-artifacts.s3.ap-south-1.amazonaws.com/splitwise/transactions.csv"
         }, **self.a_auth)
         print(resp.json())
+
+        resp = self.client.post("/api/v1/expenses/bulk/", {
+            "url": "asdf"
+        }, **self.a_auth)
+        print(resp)
