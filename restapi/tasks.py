@@ -38,6 +38,7 @@ def bulk_expenses(data):
             category_id=expense['category_id'],
             total_amount=expense['amount'],
             group_id=grp)
+        print(exp.category)
         owed = defaultdict(lambda: 0)
         lent = defaultdict(lambda: 0)
         for key in expense.keys():
@@ -62,5 +63,5 @@ def bulk_expenses(data):
                     amount_owed=owed[user],
                     expense=exp
                 )
-                ue.save()
-                print(ue)
+
+                print(ue.__dict__)

@@ -255,7 +255,7 @@ class ExpenseViewSet(viewsets.ModelViewSet):
             #     os.environ.get("S3_BUCKET_NAME"),
             #     "transactions.csv")
             x = pd.read_csv(c)
-            bulk_expenses.delay(x.to_dict('records'))
+            bulk_expenses.delay(x.fillna(0).to_dict('records'))
         presigned_url = "asdf"
         # presigned_url = s3.generate_presigned_url(
         #     ClientMethod='get_object',
