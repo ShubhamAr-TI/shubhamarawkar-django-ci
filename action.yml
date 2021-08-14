@@ -1,0 +1,19 @@
+name: 'Hello World'
+description: 'Greet someone and record the time'
+inputs:
+  app-tagname:  # id of input
+    description: 'tag of the app container'
+    required: true
+    default: ${{ secrets.app-tag-name}}
+  celery-tagname: # id of input
+    description: 'tag of the celery container'
+    required: true
+    default: ${{ secrets.celery-tag-name}}
+outputs:
+  time: # id of output
+    description: 'The time we greeted you'
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  args:
+    - ${{ inputs.app-tagname }}

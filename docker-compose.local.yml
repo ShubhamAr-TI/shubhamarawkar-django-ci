@@ -1,0 +1,20 @@
+version: '3'
+services:
+    app:
+        build: .
+        ports:
+            - "8080:8080"
+        depends_on:
+            - redisserver
+        command: python3 manage.py runserver 0.0.0.0:8080
+
+    redisserver:
+        image: redis:alpine
+
+    celery:
+        build: .
+        restart: always
+        command: celery -A cjapp worker -l info
+        depends_on:
+            - redisserver
+            - app
