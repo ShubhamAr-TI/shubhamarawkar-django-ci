@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
+from logging.handlers import SysLogHandler
+import socket
+import logging
 
 import json
 import io
@@ -26,15 +29,17 @@ from restapi.tasks import bulk_expenses
 import urllib
 import os
 User = get_user_model()
-import logging
-import socket
-from logging.handlers import SysLogHandler
+
+
 class ContextFilter(logging.Filter):
     hostname = socket.gethostname()
+
     def filter(self, record):
         record.hostname = ContextFilter.hostname
         return True
-syslog = SysLogHandler(address=('logs3.papertrailapp.com',42305))
+
+
+syslog = SysLogHandler(address=('logs3.papertrailapp.com', 42305))
 syslog.addFilter(ContextFilter())
 format = '%(asctime)s %(hostname)s YOUR_APP: %(message)s'
 formatter = logging.Formatter(format, datefmt='%b %d %H:%M:%S')
@@ -43,8 +48,10 @@ logger = logging.getLogger()
 logger.addHandler(syslog)
 logger.setLevel(logging.INFO)
 
+
 def index(request):
     return HttpResponse('Hello, world. You\'re at Rest.' + request.user)
+
 
 validate = URLValidator()
 
@@ -224,14 +231,14 @@ class ExpenseViewSet(viewsets.ModelViewSet):
                 description__icontains=self.request.query_params.get(
                     'q', None))
         return expenses
-    
+
     @action(methods=["post"], detail=False, url_path="bulk")
     def bulk(self, request):
         if 'url' not in request.data:
             raise ValidationError("URL is a necessary field")
         if request.accepted_media_type != "application/json":
             raise ValidationError("Only application/json is supported")
-        
+
         s3_csv_url = request.data['url']
         try:
             validate(s3_csv_url)
@@ -243,15 +250,21 @@ class ExpenseViewSet(viewsets.ModelViewSet):
             data = f.read()
             b = io.BytesIO(data)
             c = io.BytesIO(data)
-            s3.upload_fileobj(b, os.environ.get("S3_BUCKET_NAME"), "transactions.csv")
+            s3.upload_fileobj(
+                b,
+                os.environ.get("S3_BUCKET_NAME"),
+                "transactions.csv")
             x = pd.read_csv(c)
             bulk_expenses.delay(x.to_dict('records'))
-            
+
         presigned_url = s3.generate_presigned_url(
             ClientMethod='get_object',
-            Params={'Bucket': os.environ.get('S3_BUCKET_NAME'), 'Key': 'transactions.csv'},
+            Params={
+                'Bucket': os.environ.get('S3_BUCKET_NAME'),
+                'Key': 'transactions.csv'},
         )
-        return Response({"url": presigned_url}, status=status.HTTP_202_ACCEPTED)
+        return Response({"url": presigned_url},
+                        status=status.HTTP_202_ACCEPTED)
 
 
 class UserExpenseViewSet(viewsets.ModelViewSet):

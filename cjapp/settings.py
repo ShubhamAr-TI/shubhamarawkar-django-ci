@@ -141,8 +141,6 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 
 
-import os
-
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -160,7 +158,7 @@ LOGGING = {
             'level': 'DEBUG',
             'class': 'logging.handlers.SysLogHandler',
             'formatter': 'simple',
-            'address': ('logs3.papertrailapp.com',42305)
+            'address': ('logs3.papertrailapp.com', 42305)
         },
     },
     'root': {
@@ -169,7 +167,7 @@ LOGGING = {
     },
     'loggers': {
         'django': {
-            'handlers': ['console','SysLog'],
+            'handlers': ['console', 'SysLog'],
             'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
             'propagate': True,
         },
