@@ -37,6 +37,7 @@ def bulk_expenses(data):
             description=expense['description'],
             category_id=expense['category_id'],
             total_amount=expense['amount'],
+            group_id=grp
             )
         print(exp.category)
         owed = defaultdict(lambda: 0)
