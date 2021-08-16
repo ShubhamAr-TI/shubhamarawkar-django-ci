@@ -45,19 +45,13 @@ def bulk_expenses(data):
         owed = defaultdict(lambda: 0)
         lent = defaultdict(lambda: 0)
         for key in expense.keys():
-            if key in [
-                'description',
-                'category_id',
-                'total_amount',
-                'group_id',
-                'amount']:
-                continue
-            if 'owed' in key:
-                owed[int(key.split('_')[0])
-                ] = expense[key] if expense[key] else 0
-            else:
-                lent[int(key.split('_')[0])
-                ] = expense[key] if expense[key] else 0
+            if key not in ['description', 'category_id', 'total_amount', 'group_id', 'amount']:
+                uid = int(key.split('_')[0])
+                if 'owed' in key:
+                    owed[uid] = expense[key] if expense[key] else 0
+                else:
+                    lent[uid] = expense[key] if expense[key] else 0
+
         for user in set(list(owed.keys()) + list(lent.keys())):
             ue = models.UserExpense.objects.create(
                 user_id=user,
@@ -73,5 +67,5 @@ def bulk_simplify(username):
     sns = boto3.client('sns')
     topic = sns.Topic(arn=os.environ.get('SNS_TOPIC'))
     message = {'email': {'DataType': 'String', 'StringValue': username}}
-    response = topic.publish(
+    topic.publish(
         Message=json.dumps(message), MessageStructure='json')

@@ -42,8 +42,8 @@ class ContextFilter(logging.Filter):
 
 syslog = SysLogHandler(address=('logs3.papertrailapp.com', 42305))
 syslog.addFilter(ContextFilter())
-format = '%(asctime)s %(hostname)s YOUR_APP: %(message)s'
-formatter = logging.Formatter(format, datefmt='%b %d %H:%M:%S')
+fmt = '%(asctime)s %(hostname)s YOUR_APP: %(message)s'
+formatter = logging.Formatter(fmt, datefmt='%b %d %H:%M:%S')
 syslog.setFormatter(formatter)
 logger = logging.getLogger()
 logger.addHandler(syslog)
@@ -67,7 +67,7 @@ class Balances(APIView):
     def get(self, request):
         print(request.user)
         ue = request.user.userexpense_set.all()
-        ux = Expense.objects.filter(userexpense__in=ue).all();
+        ux = Expense.objects.filter(userexpense__in=ue).all()
         ux = UserExpense.objects.all().filter(expense__in=ux)
         amounts = ux.values('user_id').annotate(amount=Sum('amount_lent') - Sum('amount_owed')).order_by('amount')
         print(amounts)
@@ -201,7 +201,7 @@ def group_simplify(pk):
         UserExpense.objects.create(expense=exp, user_id=balance['from_user'], amount_lent=balance['amount'],
                                    amount_owed=0)
 
-    if len(amounts):
+    if len(amounts) > 0:
         total_amount = sum([amount['amount'] if amount['amount'] > 0 else 0 for amount in amounts])
         exp = Expense.objects.create(description="simplification", total_amount=total_amount,
                                      category=simplification_cat)
@@ -246,7 +246,7 @@ class GroupViewSet(viewsets.ModelViewSet):
         print(request.data, request.user, request.user.id)
         group = Group.objects.filter(id=pk).first()
         members = set([x.id for x in group.members.all()])
-        new_users = []
+
         validate_query(request.data)
         if 'add' in request.data:
             for user_id in request.data['add']['user_ids']:
@@ -326,7 +326,7 @@ class ExpenseViewSet(viewsets.ModelViewSet):
         s3_csv_url = request.data['url']
         try:
             validate(s3_csv_url)
-        except Exception as e:
+        except Exception:
             raise ValidationError("Bad URL")
         s3 = boto3.client('s3')
 
