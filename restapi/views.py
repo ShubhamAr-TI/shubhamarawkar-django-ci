@@ -1,20 +1,27 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
+from logging.handlers import SysLogHandler
+import socket
+import logging
 
 import json
+import io
 
+from django.core.validators import URLValidator
 from django.contrib.auth import get_user_model
 from django.db.models import Q, Sum
 from django.http import HttpResponse
 from rest_framework import status, filters
+import pandas as pd
 # Create your views here.
+
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
+import boto3
 from restapi.models import Category, Expense, UserExpense, Group
 from restapi.serializers import UserSerializer, CategorySerializer, ExpenseSerializer, UserExpenseSerializer, \
     GroupSerializer
@@ -22,15 +29,17 @@ from restapi.tasks import bulk_expenses
 import urllib
 import os
 User = get_user_model()
-import logging
-import socket
-from logging.handlers import SysLogHandler
+
+
 class ContextFilter(logging.Filter):
     hostname = socket.gethostname()
+
     def filter(self, record):
         record.hostname = ContextFilter.hostname
         return True
-syslog = SysLogHandler(address=('logs3.papertrailapp.com',42305))
+
+
+syslog = SysLogHandler(address=('logs3.papertrailapp.com', 42305))
 syslog.addFilter(ContextFilter())
 format = '%(asctime)s %(hostname)s YOUR_APP: %(message)s'
 formatter = logging.Formatter(format, datefmt='%b %d %H:%M:%S')
@@ -39,8 +48,12 @@ logger = logging.getLogger()
 logger.addHandler(syslog)
 logger.setLevel(logging.INFO)
 
+
 def index(request):
     return HttpResponse('Hello, world. You\'re at Rest.' + request.user)
+
+
+validate = URLValidator()
 
 
 class Logout(APIView):
@@ -218,23 +231,40 @@ class ExpenseViewSet(viewsets.ModelViewSet):
                 description__icontains=self.request.query_params.get(
                     'q', None))
         return expenses
-    
+
     @action(methods=["post"], detail=False, url_path="bulk")
     def bulk(self, request):
-        logger.error(json.dumps(request.data))
         if 'url' not in request.data:
             raise ValidationError("URL is a necessary field")
         if request.accepted_media_type != "application/json":
             raise ValidationError("Only application/json is supported")
-        # bulk_expenses.delay(request.data['url'])
+
         s3_csv_url = request.data['url']
-        print(bulk_expenses.delay(s3_csv_url))
+        try:
+            validate(s3_csv_url)
+        except Exception as e:
+            raise ValidationError("Bad URL")
+
         s3 = boto3.client('s3')
+        with urllib.request.urlopen(s3_csv_url) as f:
+            data = f.read()
+            b = io.BytesIO(data)
+            c = io.BytesIO(data)
+            s3.upload_fileobj(
+                b,
+                os.environ.get("S3_BUCKET_NAME"),
+                "transactions.csv")
+            x = pd.read_csv(c)
+            bulk_expenses.delay(x.fillna(0).to_dict('records'))
+        presigned_url = "asdf"
         presigned_url = s3.generate_presigned_url(
             ClientMethod='get_object',
-            Params={'Bucket': os.environ.get('S3_BUCKET_NAME'), 'Key': 'transactions.csv'},
+            Params={
+                'Bucket': os.environ.get('S3_BUCKET_NAME'),
+                'Key': 'transactions.csv'},
         )
-        return Response({"url": presigned_url}, status=status.HTTP_200_OK)
+        return Response({"url": presigned_url},
+                        status=status.HTTP_202_ACCEPTED)
 
 
 class UserExpenseViewSet(viewsets.ModelViewSet):
