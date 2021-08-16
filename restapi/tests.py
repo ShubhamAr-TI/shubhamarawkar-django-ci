@@ -5,13 +5,15 @@ import logging
 from datetime import datetime
 from random import random
 
+import redis
 from django.test import Client
 from django.test import TestCase
 
 from restapi.views import get_balances
-import redis
+
 log = logging.getLogger('TEST')
 from time import sleep
+
 
 def create_user(client, add_user=None, add_password=None):
     user_payload = {}
@@ -245,8 +247,8 @@ class ExpenseCRUDTestsLevel1(TestCase):
         c_get = self.client.get('/api/v1/expenses/', **self.c_auth)
         print(a_get, b_get, c_get)
         assert a_get.json()['count'] == 1 \
-            and b_get.json()['count'] == 1 \
-            and c_get.json()['count'] == 0
+               and b_get.json()['count'] == 1 \
+               and c_get.json()['count'] == 0
         assert a_get.json() == b_get.json()
 
     def test_single_expense_get(self):
@@ -643,7 +645,7 @@ class BalancesTest(TestCase):
         self.cat = self.client.post(
             f'/api/v1/categories/', {'name': 'Dummy Cat'}, **self.a_auth)
         self.client.post(f'/api/v1/groups/',
-                             {'name': 'TestGroup'}, **self.a_auth)
+                         {'name': 'TestGroup'}, **self.a_auth)
 
     def test_transitive_addition(self):
         b_add = self.client.put(f'/api/v1/groups/1/members/', {
@@ -744,6 +746,3 @@ class BulkExpenses(BalancesTest):
             "/api/v1/expenses/",
             **self.a_auth)
         print(resp, resp.json())
-
-
-

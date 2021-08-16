@@ -1,18 +1,13 @@
-
-from collections import defaultdict
 import concurrent.futures
-from datetime import datetime
 import urllib.request
-
-from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny
-from rest_framework.response import Response
-from rest_framework import status
-
+from collections import defaultdict
+from datetime import datetime
 
 from django.core.exceptions import ValidationError
-
-
+from rest_framework import status
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 
 def validate_input(data):
@@ -65,10 +60,12 @@ def serialize_timesplits(data):
 
     return {"response": formatted}
 
-def aggregate_data(data,timewise_split):
+
+def aggregate_data(data, timewise_split):
     for ts, exceptions in data.items():
         for exception, count in exceptions.items():
             timewise_split[ts][exception] += count
+
 
 class ProcessLogs(APIView):
     permission_classes = [AllowAny]
@@ -96,8 +93,8 @@ class ProcessLogs(APIView):
         for future in concurrent.futures.as_completed(future_to_url):
             url = future_to_url[future]
             data = future.result()
-            aggregate_data(data,timewise_split)
-            
+            aggregate_data(data, timewise_split)
+
         return Response(
             serialize_timesplits(timewise_split),
             status=status.HTTP_200_OK)
