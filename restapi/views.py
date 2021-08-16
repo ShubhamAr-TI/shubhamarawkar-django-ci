@@ -68,24 +68,19 @@ class Balances(APIView):
         print(request.user)
         ue = request.user.userexpense_set.all()
         ux = Expense.objects.filter(userexpense__in=ue).all();
-        # Group expenses
-        all_balances = []
-        for expense in ux.all():
-            amounts = expense.userexpense_set.all().values('user_id').annotate(
-                amount=Sum('amount_lent') - Sum('amount_owed')).order_by('amount')
-            all_balances.append(get_balances(amounts))
-
-        user_balances = defaultdict(lambda: 0)
-        for balances in all_balances:
-            for item in balances:
-                if item['amount'] == 0:
-                    continue
-                if request.user.id == item["from_user"]:
-                    user_balances[item["to_user"]] += float(-1 * item["amount"])
-                if request.user.id == item["to_user"]:
-                    user_balances[item["to_user"]] += float(item["amount"])
-        return Response([{"user": user, "amount": balance} for user, balance in user_balances.items()],
-                        status=status.HTTP_200_OK)
+        ux = UserExpense.objects.all().filter(expense__in=ux)
+        amounts = ux.values('user_id').annotate(amount=Sum('amount_lent') - Sum('amount_owed')).order_by('amount')
+        print(amounts)
+        balances = get_balances(amounts)
+        resp = []
+        for item in balances:
+            if item['amount'] == 0:
+                continue
+            if request.user.id == item["from_user"]:
+                resp.append({"user": item["to_user"], "amount": int(-1 * item["amount"])})
+            if request.user.id == item["to_user"]:
+                resp.append({"user": item["from_user"], "amount": int(item["amount"])})
+        return Response(resp, status=status.HTTP_200_OK)
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -181,6 +176,7 @@ def get_balances_all(ux):
         balances.append(balance)
     return balances
 
+
 def group_simplify(pk):
     group = Group.objects.filter(id=pk).first()
     if group is None:
@@ -220,6 +216,7 @@ def group_simplify(pk):
                 transaction['amount_owed'] = 0
                 transaction['amount_lent'] = abs(amount['amount'])
             UserExpense.objects.create(user_id=amount['user_id'], expense=exp, **transaction)
+
 
 class GroupViewSet(viewsets.ModelViewSet):
     """
