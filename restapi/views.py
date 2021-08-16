@@ -14,7 +14,7 @@ import pandas as pd
 from django.contrib.auth import get_user_model
 from django.core.validators import URLValidator
 from django.db.models import Q, Sum
-from django.http import HttpResponse
+from django.http import HttpResponse, Http404
 from rest_framework import status, filters
 from rest_framework import viewsets
 from rest_framework.decorators import action
@@ -155,6 +155,33 @@ def group_balances(group):
     return get_balances(amounts)
 
 
+def get_balances_all(ux):
+    all_balances = []
+    for expense in ux.all():
+        amounts = expense.userexpense_set.all().values('user_id').annotate(
+            amount=Sum('amount_lent') - Sum('amount_owed')).order_by('amount')
+        all_balances += get_balances(amounts)
+    agg_balances = defaultdict(lambda: 0)
+    for balance in all_balances:
+        if balance['from_user'] > balance['to_user']:
+            balance['from_user'], balance['to_user'] = balance['to_user'], balance['from_user']
+            balance['amount'] *= -1
+        agg_balances[(balance['to_user'], balance['from_user'])] += balance['amount']
+
+    balances = []
+    for (to, frm), amount in agg_balances.items():
+        if amount == 0:
+            continue
+        balance = {"to_user": to, "from_user": frm, "amount": amount}
+        if amount < 0:
+            balance["to_user"] = frm
+            balance["from_user"] = to
+            balance["amount"] = -1 * amount
+        balance['amount'] = "{:.02f}".format(balance['amount'])
+        balances.append(balance)
+    return balances
+
+
 class GroupViewSet(viewsets.ModelViewSet):
     """
     A simple ViewSet for viewing and editing User.
@@ -207,48 +234,54 @@ class GroupViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get'], url_path="balances")
     def balances(self, request, pk=None):
-        ux = Expense.objects.filter(group_id=pk).all()
-        all_balances = []
-        for expense in ux.all():
-            amounts = expense.userexpense_set.all().values('user_id').annotate(
-                amount=Sum('amount_lent') - Sum('amount_owed')).order_by('amount')
-            all_balances += get_balances(amounts)
-        agg_balances = defaultdict(lambda: 0)
-        for balance in all_balances:
-            print(balance)
-            if balance['from_user'] > balance['to_user']:
-                balance['from_user'], balance['to_user'] = balance['to_user'], balance['from_user']
-                balance['amount'] *= -1
-            agg_balances[(balance['to_user'], balance['from_user'])] += balance['amount']
-
-        balances = []
-        for (to, frm), amount in agg_balances.items():
-            if amount == 0:
-                continue
-            balance = {"to_user": to, "from_user": frm, "amount": amount}
-            if amount < 0:
-                balance["to_user"] = frm
-                balance["from_user"] = to
-                balance["amount"] = -1 * amount
-            balance['amount'] = "{:.02f}".format(balance['amount'])
-            balances.append(balance)
+        grp = Group.objects.filter(pk=pk).first()
+        if grp is None:
+            raise Http404("group doesn't exists")
+        ux = Expense.objects.filter(group_id=pk)
+        balances = get_balances_all(ux)
         return Response(balances, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['post'], url_path="simplify")
     def simplify(self, request, pk=None):
+        group = Group.objects.filter(id=pk).first()
+        if group is None:
+            raise Http404("group doesn't exists")
+        amounts = group.expense_set.all().values('userexpense__user_id').annotate(
+            amount=Sum('userexpense__amount_lent') -
+                   Sum('userexpense__amount_owed')).order_by('amount')
+        amounts = [
+            {'user_id': amount['userexpense__user_id'], 'amount': amount['amount']}
+            for amount in amounts
+        ]
+        print(amounts)
+        amounts = list(filter(lambda x: x['amount'], amounts))
+        simplification_cat = Category.get_simplification_cat()
         expenses = Expense.objects.filter(group_id=pk).all()
-        balances = UserExpense.objects.filter(expense__in=expenses).all().values('user_id').annotate(
-            amount=Sum('amount_lent') - Sum('amount_owed')).order_by('amount')
-        for expense in expenses:
-            print(expense)
-        d = [x.__dict__ for x in UserExpense.objects.filter(expense__in=expenses).all()]
-        for x in d:
-            del x['_state']
-        for x in d:
-            print(x)
-        print("Balances", balances)
-        cat = Category.get_simplification_cat()
-        print(cat)
+        balances = get_balances_all(expenses)
+        for balance in balances:
+            exp = Expense.objects.create(description="simplification", total_amount=balance['amount'], group=group,
+                                         category=simplification_cat)
+            UserExpense.objects.create(expense=exp, user_id=balance['to_user'], amount_owed=balance['amount'],
+                                       amount_lent=0)
+            UserExpense.objects.create(expense=exp, user_id=balance['from_user'], amount_lent=balance['amount'],
+                                       amount_owed=0)
+
+        if len(amounts):
+            total_amount = sum([amount['amount'] if amount['amount'] > 0 else 0 for amount in amounts])
+            exp = Expense.objects.create(description="simplification", total_amount=total_amount,
+                                         category=simplification_cat)
+            for amount in amounts:
+                if amount['amount'] == 0:
+                    continue
+                transaction = {}
+                if amount['amount'] > 0:
+                    transaction['amount_owed'] = amount['amount']
+                    transaction['amount_lent'] = 0
+                else:
+                    transaction['amount_owed'] = 0
+                    transaction['amount_lent'] = abs(amount['amount'])
+                UserExpense.objects.create(user_id=amount['user_id'], expense=exp, **transaction)
+
         return Response(status=status.HTTP_202_ACCEPTED)
 
 
@@ -281,7 +314,6 @@ class ExpenseViewSet(viewsets.ModelViewSet):
             raise ValidationError("URL is a necessary field")
         if request.accepted_media_type != "application/json":
             raise ValidationError("Only application/json is supported")
-
         s3_csv_url = request.data['url']
         try:
             validate(s3_csv_url)
