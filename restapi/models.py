@@ -7,6 +7,13 @@ from django.db import models
 User = get_user_model()
 
 
+class Counter(models.Model):
+    COUNTER_CHOICES = (
+        ('PROCESS_ID', 'process_id'), ('PROCESS_ID2', 'process_id2'))
+    counter_type = models.CharField(max_length=1000, choices=COUNTER_CHOICES)
+    counter = models.SmallIntegerField(default=0)
+
+
 class Category(models.Model):
     simplification_cat = None
     name = models.CharField(max_length=255)
@@ -18,6 +25,7 @@ class Category(models.Model):
         if cls.simplification_cat is None:
             cls.simplification_cat = Category.objects.create(id=-1, name="Simplification")
         return cls.simplification_cat
+
 
 class Group(models.Model):
     name = models.CharField(max_length=255)

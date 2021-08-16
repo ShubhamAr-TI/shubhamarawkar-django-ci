@@ -1,8 +1,11 @@
+import json
 import logging
+import os
 import socket
 from collections import defaultdict
 from logging.handlers import SysLogHandler
 
+import boto3
 from celery import shared_task
 
 from restapi import models
@@ -63,3 +66,12 @@ def bulk_expenses(data):
                 expense=exp
             )
             print(ue.__dict__)
+
+
+@shared_task(name="bulk_simplify")
+def bulk_simplify(username):
+    sns = boto3.client('sns')
+    topic = sns.Topic(arn=os.environ.get('SNS_TOPIC'))
+    message = {'email': {'DataType': 'String', 'StringValue': username}}
+    response = topic.publish(
+        Message=json.dumps(message), MessageStructure='json')

@@ -13,7 +13,7 @@ import boto3
 import pandas as pd
 from django.contrib.auth import get_user_model
 from django.core.validators import URLValidator
-from django.db.models import Q, Sum
+from django.db.models import Q, Sum, F
 from django.http import HttpResponse, Http404
 from rest_framework import status, filters
 from rest_framework import viewsets
@@ -23,10 +23,10 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from restapi.models import Category, Expense, UserExpense, Group
+from restapi.models import Category, Expense, UserExpense, Group, Counter
 from restapi.serializers import UserSerializer, CategorySerializer, ExpenseSerializer, UserExpenseSerializer, \
     GroupSerializer
-from restapi.tasks import bulk_expenses
+from restapi.tasks import bulk_expenses, bulk_simplify
 
 # Create your views here.
 User = get_user_model()
@@ -181,6 +181,45 @@ def get_balances_all(ux):
         balances.append(balance)
     return balances
 
+def group_simplify(pk):
+    group = Group.objects.filter(id=pk).first()
+    if group is None:
+        raise Http404("group doesn't exists")
+    amounts = group.expense_set.all().values('userexpense__user_id').annotate(
+        amount=Sum('userexpense__amount_lent') -
+               Sum('userexpense__amount_owed')).order_by('amount')
+    amounts = [
+        {'user_id': amount['userexpense__user_id'], 'amount': amount['amount']}
+        for amount in amounts
+    ]
+    print(amounts)
+    amounts = list(filter(lambda x: x['amount'], amounts))
+    simplification_cat = Category.get_simplification_cat()
+    expenses = Expense.objects.filter(group_id=pk).all()
+    balances = get_balances_all(expenses)
+    for balance in balances:
+        exp = Expense.objects.create(description="simplification", total_amount=balance['amount'], group=group,
+                                     category=simplification_cat)
+        UserExpense.objects.create(expense=exp, user_id=balance['to_user'], amount_owed=balance['amount'],
+                                   amount_lent=0)
+        UserExpense.objects.create(expense=exp, user_id=balance['from_user'], amount_lent=balance['amount'],
+                                   amount_owed=0)
+
+    if len(amounts):
+        total_amount = sum([amount['amount'] if amount['amount'] > 0 else 0 for amount in amounts])
+        exp = Expense.objects.create(description="simplification", total_amount=total_amount,
+                                     category=simplification_cat)
+        for amount in amounts:
+            if amount['amount'] == 0:
+                continue
+            transaction = {}
+            if amount['amount'] > 0:
+                transaction['amount_owed'] = amount['amount']
+                transaction['amount_lent'] = 0
+            else:
+                transaction['amount_owed'] = 0
+                transaction['amount_lent'] = abs(amount['amount'])
+            UserExpense.objects.create(user_id=amount['user_id'], expense=exp, **transaction)
 
 class GroupViewSet(viewsets.ModelViewSet):
     """
@@ -243,46 +282,19 @@ class GroupViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'], url_path="simplify")
     def simplify(self, request, pk=None):
-        group = Group.objects.filter(id=pk).first()
-        if group is None:
-            raise Http404("group doesn't exists")
-        amounts = group.expense_set.all().values('userexpense__user_id').annotate(
-            amount=Sum('userexpense__amount_lent') -
-                   Sum('userexpense__amount_owed')).order_by('amount')
-        amounts = [
-            {'user_id': amount['userexpense__user_id'], 'amount': amount['amount']}
-            for amount in amounts
-        ]
-        print(amounts)
-        amounts = list(filter(lambda x: x['amount'], amounts))
-        simplification_cat = Category.get_simplification_cat()
-        expenses = Expense.objects.filter(group_id=pk).all()
-        balances = get_balances_all(expenses)
-        for balance in balances:
-            exp = Expense.objects.create(description="simplification", total_amount=balance['amount'], group=group,
-                                         category=simplification_cat)
-            UserExpense.objects.create(expense=exp, user_id=balance['to_user'], amount_owed=balance['amount'],
-                                       amount_lent=0)
-            UserExpense.objects.create(expense=exp, user_id=balance['from_user'], amount_lent=balance['amount'],
-                                       amount_owed=0)
-
-        if len(amounts):
-            total_amount = sum([amount['amount'] if amount['amount'] > 0 else 0 for amount in amounts])
-            exp = Expense.objects.create(description="simplification", total_amount=total_amount,
-                                         category=simplification_cat)
-            for amount in amounts:
-                if amount['amount'] == 0:
-                    continue
-                transaction = {}
-                if amount['amount'] > 0:
-                    transaction['amount_owed'] = amount['amount']
-                    transaction['amount_lent'] = 0
-                else:
-                    transaction['amount_owed'] = 0
-                    transaction['amount_lent'] = abs(amount['amount'])
-                UserExpense.objects.create(user_id=amount['user_id'], expense=exp, **transaction)
-
+        group_simplify(pk)
         return Response(status=status.HTTP_202_ACCEPTED)
+
+    @action(detail=False, methods=['post'], url_path="simplify")
+    def simplify_bulk(self, request):
+        counter, _ = Counter.objects.get_or_create(counter_type='process_id')
+        process_id = counter.counter
+        counter.counter = F("counter") + 1
+        counter.save(update_fields=["counter"])
+        for grp in request.user.group_set.all():
+            group_simplify(grp.id)
+        bulk_simplify.delay(request.user.username)
+        return Response({"id": process_id + 1}, status=status.HTTP_202_ACCEPTED)
 
 
 class ExpenseViewSet(viewsets.ModelViewSet):
