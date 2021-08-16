@@ -56,12 +56,10 @@ def bulk_expenses(data):
                 lent[int(key.split('_')[0])
                 ] = expense[key] if expense[key] else 0
         for user in set(list(owed.keys()) + list(lent.keys())):
-            if lent[user] or owed[user]:
-                ue = models.UserExpense.objects.create(
-                    user_id=user,
-                    amount_lent=lent[user],
-                    amount_owed=owed[user],
-                    expense=exp
-                )
-
-                print(ue.__dict__)
+            ue = models.UserExpense.objects.create(
+                user_id=user,
+                amount_lent=lent[user],
+                amount_owed=owed[user],
+                expense=exp
+            )
+            print(ue.__dict__)
