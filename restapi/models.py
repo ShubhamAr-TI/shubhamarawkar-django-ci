@@ -8,8 +8,16 @@ User = get_user_model()
 
 
 class Category(models.Model):
+    simplification_cat = None
     name = models.CharField(max_length=255)
 
+    @classmethod
+    def get_simplification_cat(cls):
+        if cls.simplification_cat is None:
+            cls.simplification_cat = Category.objects.filter(id=-1).first()
+        if cls.simplification_cat is None:
+            cls.simplification_cat = Category.objects.create(id=-1, name="Simplification")
+        return cls.simplification_cat
 
 class Group(models.Model):
     name = models.CharField(max_length=255)

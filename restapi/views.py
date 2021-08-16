@@ -201,29 +201,62 @@ class GroupViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get'], url_path="expenses")
     def expenses(self, request, pk=None):
-        expenses = Expense.objects.filter(group_id=pk).all()
+        expenses = Expense.objects.filter(group_id=pk).filter(category_id__gte=0).all()
         serializer = ExpenseSerializer(instance=expenses, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['get'], url_path="balances")
     def balances(self, request, pk=None):
-        ux = Expense.objects.filter(group_id=pk).all();
-        # Group expenses
+        ux = Expense.objects.filter(group_id=pk).all()
         all_balances = []
         for expense in ux.all():
             amounts = expense.userexpense_set.all().values('user_id').annotate(
                 amount=Sum('amount_lent') - Sum('amount_owed')).order_by('amount')
-            all_balances.append(get_balances(amounts))
+            all_balances += get_balances(amounts)
+        agg_balances = defaultdict(lambda: 0)
         for balance in all_balances:
+            print(balance)
+            if balance['from_user'] > balance['to_user']:
+                balance['from_user'], balance['to_user'] = balance['to_user'], balance['from_user']
+                balance['amount'] *= -1
+            agg_balances[(balance['to_user'], balance['from_user'])] += balance['amount']
+
+        balances = []
+        for (to, frm), amount in agg_balances.items():
+            if amount == 0:
+                continue
+            balance = {"to_user": to, "from_user": frm, "amount": amount}
+            if amount < 0:
+                balance["to_user"] = frm
+                balance["from_user"] = to
+                balance["amount"] = -1 * amount
             balance['amount'] = "{:.02f}".format(balance['amount'])
-        return Response(all_balances, status=status.HTTP_200_OK)
+            balances.append(balance)
+        return Response(balances, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'], url_path="simplify")
+    def simplify(self, request, pk=None):
+        expenses = Expense.objects.filter(group_id=pk).all()
+        balances = UserExpense.objects.filter(expense__in=expenses).all().values('user_id').annotate(
+            amount=Sum('amount_lent') - Sum('amount_owed')).order_by('amount')
+        for expense in expenses:
+            print(expense)
+        d = [x.__dict__ for x in UserExpense.objects.filter(expense__in=expenses).all()]
+        for x in d:
+            del x['_state']
+        for x in d:
+            print(x)
+        print("Balances", balances)
+        cat = Category.get_simplification_cat()
+        print(cat)
+        return Response(status=status.HTTP_202_ACCEPTED)
 
 
 class ExpenseViewSet(viewsets.ModelViewSet):
     """
     A simple ViewSet for viewing and editing accounts.
     """
-    queryset = Expense.objects.all()
+    queryset = Expense.objects.filter(category_id__gte=0).all()
     serializer_class = ExpenseSerializer
 
     def get_queryset(self):
