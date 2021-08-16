@@ -1,33 +1,34 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
-from logging.handlers import SysLogHandler
-import socket
-import logging
 
-import json
 import io
+import logging
+import os
+import socket
+import urllib
+from collections import defaultdict
+from logging.handlers import SysLogHandler
 
-from django.core.validators import URLValidator
+import boto3
+import pandas as pd
 from django.contrib.auth import get_user_model
+from django.core.validators import URLValidator
 from django.db.models import Q, Sum
 from django.http import HttpResponse
 from rest_framework import status, filters
-import pandas as pd
-# Create your views here.
-
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
-import boto3
+
 from restapi.models import Category, Expense, UserExpense, Group
 from restapi.serializers import UserSerializer, CategorySerializer, ExpenseSerializer, UserExpenseSerializer, \
     GroupSerializer
 from restapi.tasks import bulk_expenses
-import urllib
-import os
+
+# Create your views here.
 User = get_user_model()
 
 
@@ -66,24 +67,29 @@ class Balances(APIView):
     def get(self, request):
         print(request.user)
         ue = request.user.userexpense_set.all()
-        ux = Expense.objects.filter(userexpense__in=ue).all()
-        ux = UserExpense.objects.all().filter(expense__in=ux)
-        amounts = ux.values('user_id').annotate(
-            amount=Sum('amount_lent') -
-            Sum('amount_owed')).order_by('amount')
-        print(amounts)
-        balances = get_balances(amounts)
-        resp = []
-        for item in balances:
-            if item['amount'] == 0:
-                continue
-            if request.user.id == item["from_user"]:
-                resp.append({"user": item["to_user"],
-                            "amount": int(-1 * item["amount"])})
-            if request.user.id == item["to_user"]:
-                resp.append(
-                    {"user": item["from_user"], "amount": int(item["amount"])})
-        return Response(resp, status=status.HTTP_200_OK)
+        ux = Expense.objects.filter(userexpense__in=ue).all();
+        # Group expenses
+        all_balances = []
+        for expense in ux.filter(group__isnull=False):
+            all_balances.append(group_balances(expense.group))
+
+        # Non Group Expenses
+        for expense in ux.filter(group__isnull=True):
+            amounts = expense.userexpense_set.all().values('user_id').annotate(
+                amount=Sum('amount_lent') - Sum('amount_owed')).order_by('amount')
+            all_balances.append(get_balances(amounts))
+
+        user_balances = defaultdict(lambda: 0)
+        for balances in all_balances:
+            for item in balances:
+                if item['amount'] == 0:
+                    continue
+                if request.user.id == item["from_user"]:
+                    user_balances[item["to_user"]] += float(-1 * item["amount"])
+                if request.user.id == item["to_user"]:
+                    user_balances[item["to_user"]] += float(item["amount"])
+        return Response([{"user": user, "amount": balance} for user, balance in user_balances.items()],
+                        status=status.HTTP_200_OK)
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -143,6 +149,16 @@ def get_balances(amounts):
     return balances
 
 
+def group_balances(group):
+    amounts = group.expense_set.all().values('userexpense__user_id').annotate(
+        amount=Sum('userexpense__amount_lent') - Sum('userexpense__amount_owed')).order_by('amount')
+    amounts = [
+        {'user_id': amount['userexpense__user_id'], 'amount': amount['amount']}
+        for amount in amounts
+    ]
+    return get_balances(amounts)
+
+
 class GroupViewSet(viewsets.ModelViewSet):
     """
     A simple ViewSet for viewing and editing User.
@@ -171,6 +187,7 @@ class GroupViewSet(viewsets.ModelViewSet):
         print(request.data, request.user, request.user.id)
         group = Group.objects.filter(id=pk).first()
         members = set([x.id for x in group.members.all()])
+        new_users = []
         validate_query(request.data)
         if 'add' in request.data:
             for user_id in request.data['add']['user_ids']:
@@ -195,15 +212,7 @@ class GroupViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'], url_path="balances")
     def balances(self, request, pk=None):
         group = Group.objects.filter(id=pk).first()
-        amounts = group.expense_set.all().values('userexpense__user_id').annotate(
-            amount=Sum('userexpense__amount_lent') -
-            Sum('userexpense__amount_owed')).order_by('amount')
-        amounts = [
-            {'user_id': amount['userexpense__user_id'], 'amount': amount['amount']}
-            for amount in amounts
-        ]
-        print(amounts)
-        balances = get_balances(amounts)
+        balances = group_balances(group)
         for balance in balances:
             balance['amount'] = "{:.02f}".format(balance['amount'])
         return Response(balances, status=status.HTTP_200_OK)
@@ -244,8 +253,8 @@ class ExpenseViewSet(viewsets.ModelViewSet):
             validate(s3_csv_url)
         except Exception as e:
             raise ValidationError("Bad URL")
-
         s3 = boto3.client('s3')
+
         with urllib.request.urlopen(s3_csv_url) as f:
             data = f.read()
             b = io.BytesIO(data)
@@ -256,7 +265,7 @@ class ExpenseViewSet(viewsets.ModelViewSet):
                 "transactions.csv")
             x = pd.read_csv(c)
             bulk_expenses.delay(x.fillna(0).to_dict('records'))
-        presigned_url = "asdf"
+
         presigned_url = s3.generate_presigned_url(
             ClientMethod='get_object',
             Params={

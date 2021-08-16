@@ -11,7 +11,7 @@ from django.test import TestCase
 from restapi.views import get_balances
 import redis
 log = logging.getLogger('TEST')
-
+from time import sleep
 
 def create_user(client, add_user=None, add_password=None):
     user_payload = {}
@@ -642,7 +642,7 @@ class BalancesTest(TestCase):
         self.c_auth = auth_header(get_a_token(self.client))
         self.cat = self.client.post(
             f'/api/v1/categories/', {'name': 'Dummy Cat'}, **self.a_auth)
-        x = self.client.post(f'/api/v1/groups/',
+        self.client.post(f'/api/v1/groups/',
                              {'name': 'TestGroup'}, **self.a_auth)
 
     def test_transitive_addition(self):
@@ -737,9 +737,13 @@ class BulkExpenses(BalancesTest):
             {
                 "url": "https://codejudge-question-artifacts.s3.ap-south-1.amazonaws.com/splitwise/transactions.csv"},
             **self.a_auth)
-        print(resp.json())
+        print(resp, resp.json())
+        sleep(1)
 
-        resp = self.client.post("/api/v1/expenses/bulk/", {
-            "url": "asdf"
-        }, **self.a_auth)
-        print(resp)
+        resp = self.client.get(
+            "/api/v1/expenses/",
+            **self.a_auth)
+        print(resp, resp.json())
+
+
+
