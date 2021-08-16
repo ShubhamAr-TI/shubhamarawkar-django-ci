@@ -70,11 +70,7 @@ class Balances(APIView):
         ux = Expense.objects.filter(userexpense__in=ue).all();
         # Group expenses
         all_balances = []
-        for expense in ux.filter(group__isnull=False):
-            all_balances.append(group_balances(expense.group))
-
-        # Non Group Expenses
-        for expense in ux.filter(group__isnull=True):
+        for expense in ux.all():
             amounts = expense.userexpense_set.all().values('user_id').annotate(
                 amount=Sum('amount_lent') - Sum('amount_owed')).order_by('amount')
             all_balances.append(get_balances(amounts))
@@ -211,11 +207,16 @@ class GroupViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get'], url_path="balances")
     def balances(self, request, pk=None):
-        group = Group.objects.filter(id=pk).first()
-        balances = group_balances(group)
-        for balance in balances:
+        ux = Expense.objects.filter(group_id=pk).all();
+        # Group expenses
+        all_balances = []
+        for expense in ux.all():
+            amounts = expense.userexpense_set.all().values('user_id').annotate(
+                amount=Sum('amount_lent') - Sum('amount_owed')).order_by('amount')
+            all_balances.append(get_balances(amounts))
+        for balance in all_balances:
             balance['amount'] = "{:.02f}".format(balance['amount'])
-        return Response(balances, status=status.HTTP_200_OK)
+        return Response(all_balances, status=status.HTTP_200_OK)
 
 
 class ExpenseViewSet(viewsets.ModelViewSet):
