@@ -53,11 +53,6 @@ class GroupSerializer(serializers.ModelSerializer):
         }
 
 
-class GroupMembersSerializer(serializers.Serializer):
-    add = serializers.ListSerializer(child=serializers.IntegerField())
-    remove = serializers.ListSerializer(child=serializers.IntegerField())
-
-
 class UserExpenseSerializer(serializers.ModelSerializer):
     class Meta(object):
         model = UserExpense

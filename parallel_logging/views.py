@@ -72,7 +72,6 @@ class ProcessLogs(APIView):
 
     def post(self, request):
         payload = request.data
-        # logger.error(json.dumps(request.data))
         try:
             validate_input(payload)
         except ValidationError as ve:

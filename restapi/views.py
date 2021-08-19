@@ -2,12 +2,9 @@
 from __future__ import unicode_literals
 
 import io
-import logging
 import os
-import socket
-import urllib
 from collections import defaultdict
-from logging.handlers import SysLogHandler
+from urllib import request as urlrequest
 
 import boto3
 import pandas as pd
@@ -32,45 +29,30 @@ from restapi.tasks import bulk_expenses, bulk_simplify
 User = get_user_model()
 
 
-class ContextFilter(logging.Filter):
-    hostname = socket.gethostname()
-
-    def filter(self, record):
-        record.hostname = ContextFilter.hostname
-        return True
-
-
-syslog = SysLogHandler(address=('logs3.papertrailapp.com', 42305))
-syslog.addFilter(ContextFilter())
-fmt = '%(asctime)s %(hostname)s YOUR_APP: %(message)s'
-formatter = logging.Formatter(fmt, datefmt='%b %d %H:%M:%S')
-syslog.setFormatter(formatter)
-logger = logging.getLogger()
-logger.addHandler(syslog)
-logger.setLevel(logging.INFO)
-
-
 def index(request):
-    return HttpResponse('Hello, world. You\'re at Rest.' + request.user)
+    return HttpResponse('Hello, world. You\'re at Rest.' + str(request.user))
 
 
 validate = URLValidator()
 
 
 class Logout(APIView):
-    def post(self, request):
+
+    @classmethod
+    def post(cls, request):
         request.user.auth_token.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class Balances(APIView):
-    def get(self, request):
-        print(request.user)
+    @classmethod
+    def get(cls, request):
+
         ue = request.user.userexpense_set.all()
         ux = Expense.objects.filter(userexpense__in=ue).all()
         ux = UserExpense.objects.all().filter(expense__in=ux)
         amounts = ux.values('user_id').annotate(amount=Sum('amount_lent') - Sum('amount_owed')).order_by('amount')
-        print(amounts)
+
         balances = get_balances(amounts)
         resp = []
         for item in balances:
@@ -183,7 +165,7 @@ def group_simplify(pk):
         raise Http404("group doesn't exists")
     amounts = group.expense_set.all().values('userexpense__user_id').annotate(
         amount=Sum('userexpense__amount_lent') -
-               Sum('userexpense__amount_owed')).order_by('amount')
+        Sum('userexpense__amount_owed')).order_by('amount')
     amounts = [
         {'user_id': amount['userexpense__user_id'], 'amount': amount['amount']}
         for amount in amounts
@@ -330,7 +312,7 @@ class ExpenseViewSet(viewsets.ModelViewSet):
             raise ValidationError("Bad URL")
         s3 = boto3.client('s3')
 
-        with urllib.request.urlopen(s3_csv_url) as f:
+        with urlrequest.urlopen(s3_csv_url) as f:
             data = f.read()
             b = io.BytesIO(data)
             c = io.BytesIO(data)
