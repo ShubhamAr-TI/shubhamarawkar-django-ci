@@ -41,13 +41,15 @@ def bulk_expenses(data):
             total_amount=expense['amount'],
             group_id=grp
         )
-        print(exp.category)
         owed = defaultdict(lambda: 0)
         lent = defaultdict(lambda: 0)
+        expense_keys = ['description', 'category_id', 'total_amount', 'group_id', 'amount']
+
         for key in expense.keys():
-            if key not in ['description', 'category_id', 'total_amount', 'group_id', 'amount']:
-                uid = int(key.split('_')[0])
-                if 'owed' in key:
+            if key not in expense_keys:
+                [user_id, action] = key.split('_')
+                uid = int(user_id)
+                if 'owed' in action:
                     owed[uid] = expense[key] if expense[key] else 0
                 else:
                     lent[uid] = expense[key] if expense[key] else 0
