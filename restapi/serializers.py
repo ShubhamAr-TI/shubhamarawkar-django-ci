@@ -1,3 +1,6 @@
+import json
+
+import boto3
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -67,6 +70,22 @@ class ExpenseSerializer(serializers.ModelSerializer):
         expense = Expense.objects.create(**validated_data)
         for eu in expense_users:
             UserExpense.objects.create(expense=expense, **eu)
+            eu['user'] = {'name': eu['user'].username, 'id': eu['user'].id}
+            eu['amount_owed'] = float(eu['amount_owed'])
+            eu['amount_lent'] = float(eu['amount_lent'])
+        sns = boto3.client('sns')
+
+        validated_data['total_amount'] = float(validated_data['total_amount'])
+        validated_data['users'] = expense_users
+        validated_data['category'] = validated_data['category'].__dict__
+        del validated_data['category']['_state']
+        print(validated_data)
+        payload = json.dumps({"default": json.dumps(validated_data)})
+        sns.publish(TopicArn='arn:aws:sns:us-east-1:280022023954:shubhamarawkar-sns',
+                    Message=payload,
+                    Subject='Expense1',
+                    MessageStructure='json')
+
         return expense
 
     def update(self, expense, validated_data):

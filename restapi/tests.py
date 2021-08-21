@@ -13,7 +13,7 @@ from restapi.views import get_balances
 
 log = logging.getLogger('TEST')
 from time import sleep
-
+from random import shuffle
 
 def create_user(client, add_user=None, add_password=None):
     user_payload = {}
@@ -746,3 +746,46 @@ class BulkExpenses(BalancesTest):
             "/api/v1/expenses/",
             **self.a_auth)
         print(resp, resp.json())
+
+
+class TenKExpenses(TestCase):
+
+    def setUp(self):
+        self.client = Client()
+        self.a_auth = auth_header(get_a_token(self.client))
+        self.b_auth = auth_header(get_a_token(self.client))
+        self.c_auth = auth_header(get_a_token(self.client))
+        self.cat = self.client.post(
+            f'/api/v1/categories/', {'name': 'Sports'}, **self.a_auth)
+        self.cat = self.client.post(
+            f'/api/v1/categories/', {'name': 'Movies'}, **self.a_auth)
+        self.cat = self.client.post(
+            f'/api/v1/categories/', {'name': 'Dining'}, **self.a_auth)
+    def test_Exp(self):
+        expense = {
+            'category': 1,
+            'description': 'culpa',
+            'total_amount': '300',
+            'users': [
+                {
+                    'amount_lent': '250',
+                    'amount_owed': '0',
+                    'user': 1
+                },
+                {
+                    'amount_lent': '50',
+                    'amount_owed': '100',
+                    'user': 2
+                },
+                {
+                    'amount_lent': '0',
+                    'amount_owed': '200',
+                    'user': 3
+                },
+            ]
+        }
+        users = [1,2,3]
+        shuffle(users)
+        print(users)
+        a_expense = self.client.post(
+            f'/api/v1/expenses/', expense, **self.a_auth)
